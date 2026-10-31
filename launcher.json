@@ -1,0 +1,10 @@
+{
+  "name": "My Launcher",
+  "theme": { "mode": "dark", "background": "#000000", "accent": "#FFFFFF", "font": "default" },
+  "home": {
+    "widgets": [{ "type": "clock" }, { "type": "battery" }],
+    "favorites": ["com.android.chrome", "com.android.settings"],
+    "columns": 4
+  },
+  "drawer": { "hidden": [], "search": true }
+}
