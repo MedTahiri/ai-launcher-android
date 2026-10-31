@@ -21,6 +21,9 @@ edits the code, installs it on your phone, checks that it runs, and looks at the
 These are real screenshots of launchers that Claude Code built on a real phone from a short request. The
 [gallery](gallery/) has the prompt behind each one.
 
+<p align="center"><img src="assets/demo.gif" width="280" alt="The glass style in use: the long-press menu, dragging an icon in edit mode, the app groups page, and search"></p>
+<p align="center"><em>The glass style on a real phone: the long-press menu, dragging an icon, app groups and search.</em></p>
+
 **Contents:** [Why this project](#why-this-project) · [Quick start](#quick-start) ·
 [What to ask for](#what-to-ask-for) · [How it works](#how-it-works) · [What's included](#whats-included) ·
 [Use it without an agent](#use-it-without-an-agent) · [Safety](#safety) · [Going back](#going-back-to-your-old-launcher) ·
@@ -284,7 +287,8 @@ This is a young project, and this is what has actually been tried:
 | **Agents** | Claude Code. Others should work through `AGENTS.md`, but are untested. |
 | **Devices** | Samsung Galaxy A17 on Android 16. Others are untested, and older Android versions may have problems. |
 | **Computers** | Linux. macOS and Windows are untested. |
-| **Not tested yet** | Running as the default home screen, including the Home button; the app list updating after an install or removal; work profiles; large screens; emulators. |
+| **Default home screen** | Tried by the maintainer on the Galaxy A17, with no problems reported. It hasn't had detailed testing, such as the Home button in each state. |
+| **Not tested yet** | The app list updating after an install or removal; work profiles; large screens; emulators. |
 
 Tried it on something else? Please [open an issue](https://github.com/MedTahiri/ai-launcher-android/issues) with what worked
 and what didn't.

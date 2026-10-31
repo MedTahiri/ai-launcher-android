@@ -191,7 +191,9 @@ fun GlassHome(
                 Column(Modifier.fillMaxSize()) {
                     HorizontalPager(
                         pager,
-                        beyondViewportPageCount = 1,
+                        // No pages kept ready off screen: with a keyboard or D-pad, Android focuses the first thing it
+                        // finds, and the pager would scroll away from the first page to reach it.
+                        beyondViewportPageCount = 0,
                         userScrollEnabled = !dragging,
                         modifier = Modifier.height(gridHeight),
                     ) { page ->
