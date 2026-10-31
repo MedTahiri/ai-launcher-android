@@ -1,0 +1,7 @@
+# Every permission the app may have, one per line. tools/check.sh fails on anything else.
+# Adding one is the user's decision: AGENTS.md says to ask first and explain why.
+
+# Android's uninstall screen, which always asks first.
+android.permission.REQUEST_DELETE_PACKAGES
+# Added by AndroidX for private broadcast receivers: gives no access to anything.
+io.github.medtahiri.launcher.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION

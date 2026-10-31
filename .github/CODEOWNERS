@@ -1,0 +1,10 @@
+# Agents act on these files or run them on people's computers, so changes need the maintainer's review.
+/AGENTS.md          @MedTahiri
+/CLAUDE.md          @MedTahiri
+/build.sh           @MedTahiri
+/tools/             @MedTahiri
+/recipes/           @MedTahiri
+/permissions.allow  @MedTahiri
+/.github/           @MedTahiri
+/gradle/            @MedTahiri
+/app/build.gradle.kts @MedTahiri
