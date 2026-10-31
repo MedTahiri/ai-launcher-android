@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The logo (assets/logo.svg), inside the 66dp middle that every icon shape keeps visible. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path android:fillColor="#EBFFFFFF" android:pathData="M37,30h9a7,7 0,0 1,7 7v9a7,7 0,0 1,-7 7h-9a7,7 0,0 1,-7 -7v-9a7,7 0,0 1,7 -7z" />
+    <path android:fillColor="#8CFFFFFF" android:pathData="M37,55h9a7,7 0,0 1,7 7v9a7,7 0,0 1,-7 7h-9a7,7 0,0 1,-7 -7v-9a7,7 0,0 1,7 -7z" />
+    <path android:fillColor="#EBFFFFFF" android:pathData="M62,55h9a7,7 0,0 1,7 7v9a7,7 0,0 1,-7 7h-9a7,7 0,0 1,-7 -7v-9a7,7 0,0 1,7 -7z" />
+    <path android:fillColor="#FF9A4A" android:pathData="M66.5,27.5 Q66.5,41.5 80.5,41.5 Q66.5,41.5 66.5,55.5 Q66.5,41.5 52.5,41.5 Q66.5,41.5 66.5,27.5 Z" />
+</vector>

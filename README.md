@@ -1,6 +1,8 @@
-# Android Launcher
+<p align="center"><img src="assets/logo.svg" width="128" alt="A grid of home screen tiles where one tile is an orange AI spark"></p>
 
-**Describe your dream launcher. Your AI coding agent builds it and puts it on your phone.**
+<h1 align="center">AI Launcher for Android</h1>
+
+<p align="center"><strong>Describe your dream launcher. Your AI coding agent builds it and puts it on your phone.</strong></p>
 
 An open-source Android home screen made to be changed by an AI agent. Say what you want in plain words, and your agent
 edits the code, installs it on your phone, checks that it runs, and looks at the result.
@@ -76,7 +78,7 @@ Turn debugging off again when you're finished. A launcher that's already install
 
 Open your agent in any folder and paste this, changing the last sentence to what you want:
 
-> Clone github.com/MedTahiri/android-launcher, read its AGENTS.md and follow it. Build me a launcher with big buttons and
+> Clone github.com/MedTahiri/ai-launcher-android, read its AGENTS.md and follow it. Build me a launcher with big buttons and
 > only my phone, messages and photos apps.
 
 The agent then:
@@ -219,8 +221,8 @@ You can build and customize it yourself. You need a JDK (17 or newer), the Andro
 Studio includes all three.
 
 ```bash
-git clone https://github.com/MedTahiri/android-launcher
-cd android-launcher
+git clone https://github.com/MedTahiri/ai-launcher-android
+cd ai-launcher-android
 tools/doctor.sh     # shows anything that's missing
 ```
 
@@ -284,7 +286,7 @@ This is a young project, and this is what has actually been tried:
 | **Computers** | Linux. macOS and Windows are untested. |
 | **Not tested yet** | Running as the default home screen, including the Home button; the app list updating after an install or removal; work profiles; large screens; emulators. |
 
-Tried it on something else? Please [open an issue](https://github.com/MedTahiri/android-launcher/issues) with what worked
+Tried it on something else? Please [open an issue](https://github.com/MedTahiri/ai-launcher-android/issues) with what worked
 and what didn't.
 
 ## Known limits
