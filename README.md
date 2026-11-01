@@ -284,8 +284,8 @@ This is a young project, and this is what has actually been tried:
 
 | | |
 |---|---|
-| **Agents** | Claude Code. Others should work through `AGENTS.md`, but are untested. |
-| **Devices** | Samsung Galaxy A17 on Android 16. Others are untested, and older Android versions may have problems. |
+| **Agents** | Claude Code, including a fresh session working from a new clone. Others should work through `AGENTS.md`, but are untested. |
+| **Devices** | Samsung Galaxy A17 on Android 16, and Galaxy A56 on Android 17. Others are untested, and older Android versions may have problems. |
 | **Computers** | Linux. macOS and Windows are untested. |
 | **Default home screen** | Tried by the maintainer on the Galaxy A17, with no problems reported. It hasn't had detailed testing, such as the Home button in each state. |
 | **Not tested yet** | The app list updating after an install or removal; work profiles; large screens; emulators. |

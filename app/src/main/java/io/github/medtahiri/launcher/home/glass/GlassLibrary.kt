@@ -29,7 +29,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -66,10 +71,22 @@ fun GlassLibraryPage(
     }
     LazyVerticalGrid(
         columns = GridCells.Fixed(2),
-        contentPadding = PaddingValues(horizontal = 22.dp, vertical = 4.dp),
+        contentPadding = PaddingValues(start = 22.dp, end = 22.dp, top = 4.dp, bottom = 32.dp),
         horizontalArrangement = Arrangement.spacedBy(20.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
-        modifier = Modifier.fillMaxSize().testTag("glass-library"),
+        modifier = Modifier
+            .fillMaxSize()
+            .testTag("glass-library")
+            // Fades out at the bottom, so that a row part way through scrolling looks scrollable rather than cut off.
+            .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
+            .drawWithContent {
+                drawContent()
+                val fade = 28.dp.toPx()
+                drawRect(
+                    Brush.verticalGradient(listOf(Color.Transparent, Color.Black), startY = size.height - fade, endY = size.height),
+                    blendMode = BlendMode.DstOut,
+                )
+            },
     ) {
         item(span = { GridItemSpan(2) }) {
             Row(

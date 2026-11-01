@@ -33,6 +33,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
@@ -163,7 +164,7 @@ fun GlassIcon(
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium,
                     textAlign = TextAlign.Center,
-                    shadow = Shadow(Color.Black.copy(alpha = 0.45f), blurRadius = 4f),
+                    shadow = Shadow(Color.Black.copy(alpha = 0.8f), offset = Offset(0f, 1f), blurRadius = 8f), // readable on pale wallpapers
                 ),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
