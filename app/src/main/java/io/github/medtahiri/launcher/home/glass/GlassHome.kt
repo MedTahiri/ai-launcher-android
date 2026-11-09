@@ -76,7 +76,9 @@ import io.github.medtahiri.launcher.core.AppEntry
 import io.github.medtahiri.launcher.core.LauncherConfig
 import io.github.medtahiri.launcher.core.uninstallApp
 import io.github.medtahiri.launcher.home.DefaultPrompt
+import io.github.medtahiri.launcher.home.LocalHomeGestures
 import io.github.medtahiri.launcher.home.LocalOpenCustomize
+import io.github.medtahiri.launcher.home.PrivateAppsButton
 import io.github.medtahiri.launcher.home.NotificationDotsPrompt
 import io.github.medtahiri.launcher.home.visibleInDrawer
 import io.github.medtahiri.launcher.theme.GlassFill
@@ -109,6 +111,7 @@ fun GlassHome(
     isDefaultLauncher: Boolean,
 ) {
     val context = LocalContext.current
+    val gestures = LocalHomeGestures.current
     val store = remember { GlassStore(context, config.home.favorites) }
     val apps = remember(allApps, config) { visibleInDrawer(allApps, config, "") }
     val byKey = remember(apps) { apps.associateBy { it.key } }
@@ -227,6 +230,7 @@ fun GlassHome(
                                     .pointerInput(wiggling) {
                                         detectTapGestures(
                                             onLongPress = { if (!wiggling) wiggling = true },
+                                            onDoubleTap = if (gestures.has("doubleTap")) { _ -> if (!wiggling) gestures.perform("doubleTap") } else null,
                                             onTap = { if (wiggling) wiggling = false },
                                         )
                                     }
@@ -237,12 +241,24 @@ fun GlassHome(
                                         detectVerticalDragGestures(
                                             onDragStart = { dragged = 0f },
                                             onVerticalDrag = { _, amount -> dragged += amount },
-                                            onDragEnd = { if (kotlin.math.abs(dragged) > distance) onSearchOpenChange(true) },
+                                            onDragEnd = {
+                                                when {
+                                                    dragged > distance && gestures.has("swipeDown") -> gestures.perform("swipeDown")
+                                                    kotlin.math.abs(dragged) > distance -> onSearchOpenChange(true)
+                                                }
+                                            },
                                         )
                                     },
                             )
                         } else {
-                            GlassLibraryPage(apps, suggestions, callbacks, { onSearchOpenChange(true) }, folders(apps, config)) { title, list ->
+                            GlassLibraryPage(
+                                apps,
+                                suggestions,
+                                callbacks,
+                                { onSearchOpenChange(true) },
+                                folders(apps, config),
+                                extra = { PrivateAppsButton(allApps, config, Color.White) },
+                            ) { title, list ->
                                 group = OpenGroup(title, list)
                             }
                         }

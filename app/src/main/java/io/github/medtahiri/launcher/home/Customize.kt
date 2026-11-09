@@ -49,7 +49,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.platform.LocalContext
 import io.github.medtahiri.launcher.core.AppEntry
+import io.github.medtahiri.launcher.core.Backup
 import io.github.medtahiri.launcher.core.LauncherConfig
 import io.github.medtahiri.launcher.core.PhoneSettings
 import kotlinx.serialization.json.JsonElement
@@ -59,7 +64,7 @@ import kotlin.math.roundToInt
 val LocalOpenCustomize = androidx.compose.runtime.staticCompositionLocalOf<(() -> Unit)?> { null }
 
 private val BACKGROUNDS = listOf("wallpaper", "#000000", "#101418", "#1B1B2F", "#2B2118", "#FFFFFF", "#F5F0E6")
-private val ACCENTS = listOf("#FFFFFF", "#A8C7FA", "#81C784", "#FFB74D", "#F48FB1", "#CE93D8", "#4DD0E1", "#FF5252")
+private val ACCENTS = listOf("wallpaper", "#FFFFFF", "#A8C7FA", "#81C784", "#FFB74D", "#F48FB1", "#CE93D8", "#4DD0E1", "#FF5252")
 
 private fun hex(value: String) = Color(0xFF000000 or value.removePrefix("#").toLong(16))
 
@@ -72,12 +77,13 @@ private fun hex(value: String) = Color(0xFF000000 or value.removePrefix("#").toL
 fun CustomizeScreen(
     config: LauncherConfig,
     apps: List<AppEntry>,
-    hasPhoneChanges: Boolean,
-    onSave: (Map<String, JsonElement>) -> Unit,
+    controls: PhoneControls,
+    onSave: (Map<String, JsonElement>, String) -> Unit,
     onReset: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     var draft by remember { mutableStateOf(config) }
+    var profile by remember { mutableStateOf(controls.pickedProfile) }
     var pickingFavorites by remember { mutableStateOf(false) }
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         // A dialog is its own window, so test tags need turning on again for tools to see them.
@@ -88,8 +94,17 @@ fun CustomizeScreen(
                     pickingFavorites = false
                 })
             } else {
-                CustomizeForm(draft, { draft = it }, hasPhoneChanges, { pickingFavorites = true }, onReset, onDismiss) {
-                    onSave(PhoneSettings.changes(config, draft))
+                CustomizeForm(
+                    draft,
+                    { draft = it },
+                    controls,
+                    profile,
+                    { profile = it },
+                    { pickingFavorites = true },
+                    onReset,
+                    onDismiss,
+                ) {
+                    onSave(PhoneSettings.changes(config, draft), profile)
                 }
             }
         }
@@ -100,7 +115,9 @@ fun CustomizeScreen(
 private fun CustomizeForm(
     draft: LauncherConfig,
     onChange: (LauncherConfig) -> Unit,
-    hasPhoneChanges: Boolean,
+    controls: PhoneControls,
+    profile: String,
+    onProfile: (String) -> Unit,
     onPickFavorites: () -> Unit,
     onReset: () -> Unit,
     onCancel: () -> Unit,
@@ -124,6 +141,18 @@ private fun CustomizeForm(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            if (draft.profiles.isNotEmpty()) {
+                Setting("Profile") {
+                    Choices(listOf("" to "Automatic") + draft.profiles.map { it.name to it.name }, profile, onProfile)
+                    controls.activeProfile?.let {
+                        Text(
+                            "$it is in use now. It can change some of the settings below while it is.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
             Setting("Style") {
                 Choices(listOf("simple" to "Simple", "glass" to "Glass"), home.style) { onChange(draft.copy(home = home.copy(style = it))) }
             }
@@ -177,7 +206,8 @@ private fun CustomizeForm(
                     Text(if (home.favorites.isEmpty()) "Choose apps" else "${home.favorites.size} chosen · Change")
                 }
             }
-            if (hasPhoneChanges) {
+            BackupButtons(controls.onRestored)
+            if (controls.hasPhoneChanges) {
                 HorizontalDivider()
                 TextButton(onClick = onReset, modifier = Modifier.testTag("customize-reset")) {
                     Text("Undo all changes made on this phone", color = MaterialTheme.colorScheme.error)
@@ -275,6 +305,36 @@ private fun FavoritesPicker(apps: List<AppEntry>, initial: List<String>, onDone:
                     if (position >= 0) Text("${position + 1}", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
+        }
+    }
+}
+
+/** Saves what was set on this phone to a file, or restores it, for a new phone or a reinstall. */
+@Composable
+private fun BackupButtons(onRestored: () -> Unit) {
+    val context = LocalContext.current
+    val save = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+        uri ?: return@rememberLauncherForActivityResult
+        runCatching { context.contentResolver.openOutputStream(uri)?.use { it.write(Backup.export(context).toByteArray()) } }
+            .onSuccess { Toast.makeText(context, "Backed up", Toast.LENGTH_SHORT).show() }
+            .onFailure { Toast.makeText(context, "Couldn't save the backup", Toast.LENGTH_SHORT).show() }
+    }
+    val restore = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        uri ?: return@rememberLauncherForActivityResult
+        val text = runCatching { context.contentResolver.openInputStream(uri)?.use { it.readBytes().decodeToString() } }.getOrNull()
+        val problem = if (text == null) "Couldn't read that file" else Backup.import(context, text)
+        if (problem == null) onRestored() else Toast.makeText(context, problem, Toast.LENGTH_LONG).show()
+    }
+    Setting("Backup") {
+        Text(
+            "Saves what you changed on this phone, including the glass style's icons and dock, to move it to a new phone. " +
+                "Widgets have to be added again.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(onClick = { save.launch("launcher-backup.json") }, modifier = Modifier.testTag("backup-save")) { Text("Back up") }
+            OutlinedButton(onClick = { restore.launch(arrayOf("application/json", "text/plain", "*/*")) }) { Text("Restore") }
         }
     }
 }

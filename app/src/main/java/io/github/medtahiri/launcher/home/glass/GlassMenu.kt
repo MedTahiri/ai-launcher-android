@@ -33,7 +33,13 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.content.pm.ShortcutInfo
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import io.github.medtahiri.launcher.core.AppEntry
+import io.github.medtahiri.launcher.core.Shortcuts
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import io.github.medtahiri.launcher.core.openAppInfo
 import io.github.medtahiri.launcher.core.uninstallApp
 import io.github.medtahiri.launcher.theme.GlassDanger
@@ -62,7 +68,14 @@ fun GlassMenu(
     val appear = remember { Animatable(0f) }
     LaunchedEffect(Unit) { appear.animateTo(1f, spring(dampingRatio = 0.72f, stiffness = 420f)) }
 
+    // The app's own shortcuts, like "New message", above the launcher's actions.
+    val shortcuts by produceState(emptyList<ShortcutInfo>(), app.key) {
+        value = withContext(Dispatchers.IO) { Shortcuts.forApp(context, app) }
+    }
     val actions = buildList {
+        shortcuts.forEach { shortcut ->
+            add(MenuAction(Shortcuts.label(shortcut), Color.White, { ArrowGlyph(it) }) { Shortcuts.start(context, shortcut) })
+        }
         add(MenuAction("Edit home screen", Color.White, { GridGlyph(color = it) }) { onEditHomeScreen() })
         add(MenuAction(if (inDock) "Remove from dock" else "Add to dock", Color.White, { DockGlyph(color = it) }) { onToggleDock(app) })
         add(MenuAction("App info", Color.White, { InfoGlyph(color = it) }) { openAppInfo(context, app) })
@@ -135,4 +148,10 @@ fun GlassMenu(
             }
         }
     }
+}
+
+/** A small arrow, beside an app's own shortcuts. */
+@Composable
+private fun ArrowGlyph(color: Color) {
+    Text("↗", color = color, fontSize = 17.sp)
 }

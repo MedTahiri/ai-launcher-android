@@ -18,6 +18,11 @@ perhaps a video call app.
 - Few ways to go wrong: no swipe to open the drawer, and no Uninstall in the long-press menu.
 - A clear clock and date. A battery reading helps, since a dead phone is a common problem.
 - Rename the launcher something friendly, such as "Home".
+- Ask who they call most. A `contact` tile for each of 2 or 3 people, with `call` or `whatsapp`, is easier than any app.
+  Their numbers go in `launcher.json`, so check the person is fine with that, and keep the fork private.
+- Offer a `help_button` with a trusted number. It opens the dialer ready to call, so a stray tap calls no one.
+- Offer `home.speakAppNames`, which says the app's name aloud as it opens.
+- Turn off `home.allowCustomize`, so the look can't be changed by accident.
 - Keep the drawer short with `drawer.only`, listing the apps they use. Tell the person what you left out; those apps
   stay installed, and removing that setting brings them back.
 
@@ -34,7 +39,8 @@ perhaps a video call app.
     "spacing": 12,
     "drawerButton": "button",
     "swipeUpOpensDrawer": false,
-    "allowUninstall": false
+    "allowUninstall": false,
+    "allowCustomize": false
   },
   "drawer": { "columns": 2, "iconSize": 96 }
 }

@@ -63,6 +63,7 @@ fun GlassLibraryPage(
     callbacks: IconCallbacks,
     onOpenSearch: () -> Unit,
     folders: List<Folder> = emptyList(),
+    extra: (@Composable () -> Unit)? = null,
     onOpenGroup: (String, List<AppEntry>) -> Unit,
 ) {
     // Keys are kept apart, since a folder can have the same name as a category.
@@ -107,6 +108,7 @@ fun GlassLibraryPage(
                 Text("All apps", color = GlassSecondaryText, fontSize = 16.sp)
             }
         }
+        extra?.let { content -> item(span = { GridItemSpan(2) }) { content() } }
         items(groups, key = { it.first }) { (_, title, groupApps) ->
             GroupCard(title, groupApps, callbacks, onOpenGroup)
         }

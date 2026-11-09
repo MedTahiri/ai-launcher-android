@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.drawable.toBitmap
 import io.github.medtahiri.launcher.core.LauncherConfig
+import io.github.medtahiri.launcher.core.Shortcuts
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -75,24 +76,6 @@ private fun settingsFor(query: String): List<SettingsEntry> {
     }.take(3)
 }
 
-/** App shortcuts, like "New message". Android only shares them with the default home screen; otherwise there are none. */
-private fun loadShortcuts(context: Context): List<ShortcutInfo> {
-    val launcherApps = context.getSystemService(LauncherApps::class.java)
-    return try {
-        if (!launcherApps.hasShortcutHostPermission()) return emptyList()
-        val query = LauncherApps.ShortcutQuery().setQueryFlags(
-            LauncherApps.ShortcutQuery.FLAG_MATCH_DYNAMIC or LauncherApps.ShortcutQuery.FLAG_MATCH_MANIFEST or
-                LauncherApps.ShortcutQuery.FLAG_MATCH_PINNED,
-        )
-        launcherApps.profiles.flatMap { launcherApps.getShortcuts(query, it).orEmpty() }
-            .filter { it.isEnabled }
-            .distinctBy { it.`package` + "/" + it.id + "@" + it.userHandle.hashCode() }
-    } catch (e: Exception) { // SecurityException or IllegalStateException while the phone is locked
-        Log.w("SearchExtras", "Can't read shortcuts", e)
-        emptyList()
-    }
-}
-
 /**
  * What search finds besides apps: the answer to a sum, Settings screens, app shortcuts, and searching the web. Shown
  * above the apps, while something is typed.
@@ -111,7 +94,7 @@ fun SearchExtras(
     val search = config.search
     // Loaded once each time search opens: shortcuts change as people use their apps.
     val shortcuts by produceState(emptyList<ShortcutInfo>(), search.shortcuts) {
-        if (search.shortcuts) value = withContext(Dispatchers.IO) { loadShortcuts(context) }
+        if (search.shortcuts) value = withContext(Dispatchers.IO) { Shortcuts.all(context) }
     }
     val text = query.trim()
     if (text.isEmpty()) return
@@ -142,9 +125,7 @@ fun SearchExtras(
         }
         matchingShortcuts.forEach { shortcut ->
             ShortcutRow(shortcut, textColor, secondaryColor) {
-                runCatching {
-                    context.getSystemService(LauncherApps::class.java).startShortcut(shortcut, null, null)
-                }.onFailure { Toast.makeText(context, "Couldn't open that", Toast.LENGTH_SHORT).show() }
+                Shortcuts.start(context, shortcut)
                 onDone()
             }
         }
@@ -194,11 +175,7 @@ private fun ShortcutRow(shortcut: ShortcutInfo, textColor: Color, secondaryColor
     var icon by remember(shortcut.id) { mutableStateOf<ImageBitmap?>(null) }
     LaunchedEffect(shortcut.id) {
         icon = withContext(Dispatchers.IO) {
-            runCatching {
-                val density = context.resources.displayMetrics.densityDpi
-                context.getSystemService(LauncherApps::class.java).getShortcutIconDrawable(shortcut, density)
-                    ?.toBitmap(96, 96)?.asImageBitmap()
-            }.getOrNull()
+            Shortcuts.icon(context, shortcut, 96)
         }
     }
     val app = remember(shortcut.`package`) {
