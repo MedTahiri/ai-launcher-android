@@ -26,7 +26,12 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import android.content.pm.ShortcutInfo
+import androidx.compose.runtime.produceState
 import io.github.medtahiri.launcher.core.AppEntry
+import io.github.medtahiri.launcher.core.Shortcuts
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import io.github.medtahiri.launcher.core.LocalNotificationDots
 import io.github.medtahiri.launcher.core.NotificationDot
 import io.github.medtahiri.launcher.core.openApp
@@ -78,7 +83,21 @@ fun AppIcon(
                 )
             }
         }
+        // The app's own shortcuts, like "New message", loaded when the menu opens.
+        val shortcuts by produceState(emptyList<ShortcutInfo>(), menuOpen) {
+            if (menuOpen) value = withContext(Dispatchers.IO) { Shortcuts.forApp(context, app) }
+        }
         DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+            shortcuts.forEach { shortcut ->
+                DropdownMenuItem(
+                    text = { Text(Shortcuts.label(shortcut)) },
+                    modifier = Modifier.testTag("shortcut"),
+                    onClick = {
+                        menuOpen = false
+                        Shortcuts.start(context, shortcut)
+                    },
+                )
+            }
             DropdownMenuItem(text = { Text("App info") }, onClick = { menuOpen = false; openAppInfo(context, app) })
             if (allowUninstall) {
                 DropdownMenuItem(text = { Text("Uninstall") }, onClick = { menuOpen = false; uninstallApp(context, app) })

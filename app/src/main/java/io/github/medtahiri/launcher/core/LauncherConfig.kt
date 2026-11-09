@@ -4,7 +4,9 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.intOrNull
 
 /** The launcher's settings, from launcher.json. New settings need a default, so older files keep working. */
@@ -16,9 +18,26 @@ data class LauncherConfig(
     val drawer: DrawerConfig = DrawerConfig(),
     val focus: FocusConfig = FocusConfig(),
     val search: SearchConfig = SearchConfig(),
+    val gestures: GesturesConfig = GesturesConfig(),
+    val profiles: List<ProfileConfig> = emptyList(),
     /** Apps the focus rules hide right now. Worked out on the phone, never read from launcher.json. */
     @Transient val hiddenNow: Set<String> = emptySet(),
 )
+
+/**
+ * What gestures on empty home screen space do: none, drawer, search, customize, notifications, quick_settings, lock or
+ * app:PACKAGE. Notifications, quick settings and lock need Accessibility access, which the launcher asks for.
+ */
+@Serializable
+data class GesturesConfig(
+    val doubleTap: String = "none",
+    val swipeDown: String = "none",
+    /** Simple style only: in glass, sideways swipes turn pages. */
+    val swipeLeft: String = "none",
+    val swipeRight: String = "none",
+) {
+    val all: Map<String, String> get() = mapOf("doubleTap" to doubleTap, "swipeDown" to swipeDown, "swipeLeft" to swipeLeft, "swipeRight" to swipeRight)
+}
 
 /** What search finds besides apps. */
 @Serializable
@@ -39,7 +58,7 @@ data class ThemeConfig(
     val mode: String = "dark",
     /** "#RRGGBB", "wallpaper" (the system wallpaper) or "auto" (from the mode). */
     val background: String = "#000000",
-    /** "#RRGGBB". */
+    /** "#RRGGBB", or "wallpaper" for a color from the wallpaper. */
     val accent: String = "#FFFFFF",
     /** "default", "sans", "serif" or "mono". */
     val font: String = "default",
@@ -75,6 +94,8 @@ data class HomeConfig(
     val notificationDots: Boolean = false,
     /** Whether long press on the home screen offers Customize, for changing the look on the phone. */
     val allowCustomize: Boolean = true,
+    /** Says the app's name aloud as it opens ("Opening WhatsApp"), for people who find icons hard to read. */
+    val speakAppNames: Boolean = false,
 )
 
 @Serializable
@@ -104,10 +125,14 @@ data class DrawerConfig(
     /** In dp. */
     val iconSize: Int = 56,
     val showLabels: Boolean = true,
+    /** Private apps: left out everywhere, and shown only after unlocking with the phone's fingerprint, face or PIN. */
+    @SerialName("private") val privateApps: List<String> = emptyList(),
 )
 
 /** A config and what's wrong with it. With problems, [config] is the defaults: the launcher still opens. */
 data class ParsedConfig(val config: LauncherConfig, val problems: List<String>)
+
+val GESTURE_ACTIONS = listOf("none", "drawer", "search", "customize", "notifications", "quick_settings", "lock")
 
 private val json = Json { ignoreUnknownKeys = false } // a misspelled setting is a mistake, not something to skip
 private val HEX_COLOR = Regex("#[0-9a-fA-F]{6}")
@@ -123,7 +148,19 @@ fun parseConfig(
     } catch (e: IllegalArgumentException) { // includes SerializationException
         return ParsedConfig(LauncherConfig(), listOf(e.message?.lineSequence()?.take(3)?.joinToString(" ") ?: "invalid JSON"))
     }
-    val problems = validate(config, widgetTypes, validateWidget)
+    val problems = validate(config, widgetTypes, validateWidget).toMutableList()
+    // Each profile must make a valid config too: checked now, so a profile can't break the launcher at 18:00.
+    if (problems.isEmpty() && config.profiles.isNotEmpty()) {
+        val raw = json.parseToJsonElement(text).jsonObject
+        config.profiles.forEach { profile ->
+            val withProfile = Profiles.apply(JsonObject(raw - "profiles"), profile)
+            val result = runCatching { json.decodeFromJsonElement(LauncherConfig.serializer(), withProfile) }
+            result.exceptionOrNull()?.let {
+                problems += "profiles (${profile.name}): ${it.message?.lineSequence()?.first() ?: "invalid setting"}"
+            }
+            result.getOrNull()?.let { problems += validate(it, widgetTypes, validateWidget).map { p -> "profiles (${profile.name}): $p" } }
+        }
+    }
     return if (problems.isEmpty()) ParsedConfig(config, problems) else ParsedConfig(LauncherConfig(), problems)
 }
 
@@ -137,7 +174,9 @@ private fun validate(
     if (c.theme.background !in setOf("wallpaper", "auto") && !HEX_COLOR.matches(c.theme.background)) {
         add("theme.background must be #RRGGBB, wallpaper or auto, not \"${c.theme.background}\"")
     }
-    if (!HEX_COLOR.matches(c.theme.accent)) add("theme.accent must be #RRGGBB, not \"${c.theme.accent}\"")
+    if (c.theme.accent != "wallpaper" && !HEX_COLOR.matches(c.theme.accent)) {
+        add("theme.accent must be #RRGGBB or wallpaper, not \"${c.theme.accent}\"")
+    }
     if (c.theme.font !in setOf("default", "sans", "serif", "mono")) add("theme.font must be default, sans, serif or mono, not \"${c.theme.font}\"")
     if (c.theme.textScale !in 0.7f..2.5f) add("theme.textScale must be from 0.7 to 2.5, not ${c.theme.textScale}")
     if (c.home.columns !in 1..8) add("home.columns must be from 1 to 8, not ${c.home.columns}")
@@ -161,11 +200,18 @@ private fun validate(
     c.home.folders.groupBy { it.name.trim().lowercase() }.filter { it.value.size > 1 }.forEach {
         add("home.folders: two folders are called \"${it.value.first().name}\"")
     }
+    c.gestures.all.forEach { (gesture, action) ->
+        val app = action.removePrefix("app:")
+        if (action !in GESTURE_ACTIONS && !(action.startsWith("app:") && PACKAGE_NAME.matches(app))) {
+            add("gestures.$gesture must be ${GESTURE_ACTIONS.joinToString()} or app:PACKAGE, not \"$action\"")
+        }
+    }
+    addAll(Profiles.validate(c.profiles))
     addAll(FocusRules.validate(c.focus) { PACKAGE_NAME.matches(it) })
     if (c.theme.iconPack.isNotEmpty() && !PACKAGE_NAME.matches(c.theme.iconPack)) {
         add("theme.iconPack must be a package name (tools/apps.sh --icon-packs lists them), not \"${c.theme.iconPack}\"")
     }
-    (c.home.favorites + c.home.folders.flatMap { it.apps } + c.drawer.hidden + c.drawer.only).filterNot { PACKAGE_NAME.matches(it) }.forEach {
+    (c.home.favorites + c.home.folders.flatMap { it.apps } + c.drawer.hidden + c.drawer.only + c.drawer.privateApps).filterNot { PACKAGE_NAME.matches(it) }.forEach {
         add("\"$it\" isn't a package name (like com.android.chrome)")
     }
 }

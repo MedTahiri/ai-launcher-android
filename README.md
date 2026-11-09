@@ -205,6 +205,15 @@ register it.
 - **Search:** besides apps, it answers sums (`12*7`), opens Settings screens (*wifi*, *battery*), finds app shortcuts
   (*new message*), and can hand a search to your browser.
 
+### More
+
+- **Profiles:** other looks for set hours or picked on the phone, such as Work and Evening.
+- **Gestures:** double tap, swipe down and swipes sideways can open an app, the drawer, notifications or lock the screen.
+- **App shortcuts:** long press an app for its own shortcuts, like "New message".
+- **For someone older:** big contact tiles to call or WhatsApp a person, a help button, and app names said aloud.
+- **Private apps:** hidden everywhere, and shown after your fingerprint, face or PIN.
+- **Accent from your wallpaper**, and **backup and restore** of what you set on the phone.
+
 ### Folders, icon packs and notification dots
 
 - **Folders:** named groups of apps, set in `launcher.json`.
@@ -310,8 +319,8 @@ This is a young project, and this is what has actually been tried:
 | **Devices** | Samsung Galaxy A17 on Android 16, and Galaxy A56 on Android 17. Others are untested, and older Android versions may have problems. |
 | **Computers** | Linux. macOS and Windows are untested. |
 | **Default home screen** | Tried by the maintainer on the Galaxy A17, with no problems reported. It hasn't had detailed testing, such as the Home button in each state. |
-| **Newer features** | On the Galaxy A56: Android widgets (adding, the picker, long press, removing), folders, focus rules (hide, "Show", pause), search (sums, Settings), Customize, and a newer `launcher.json` value replacing a phone change, in both styles. Notification dots: the permission flow only. |
-| **Not tested yet** | The app list updating after an install or removal; work profiles; large screens; emulators; icon packs; app shortcuts in search; drawing notification dots. |
+| **Newer features** | On the Galaxy A56: Android widgets (adding, the picker, long press, removing), folders, focus rules (hide, "Show", pause), search (sums, Settings), Customize, and a newer `launcher.json` value replacing a phone change, in both styles. Notification dots: the permission flow only. Then contact and help tiles (opening the dialer), double tap and swipe gestures (and the Accessibility prompt), private apps with the fingerprint or PIN, spoken app names, the accent from the phone's palette, a picked profile, and backup and restore. |
+| **Not tested yet** | The app list updating after an install or removal; work profiles; large screens; emulators; icon packs; app shortcuts in search and menus; drawing notification dots; lock and notification gestures with Accessibility turned on; profiles switching by their hours. |
 
 Tried it on something else? Please [open an issue](https://github.com/MedTahiri/ai-launcher-android/issues) with what worked
 and what didn't.

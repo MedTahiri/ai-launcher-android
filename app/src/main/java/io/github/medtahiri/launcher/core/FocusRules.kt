@@ -1,7 +1,6 @@
 package io.github.medtahiri.launcher.core
 
 import kotlinx.serialization.Serializable
-import java.time.DayOfWeek
 import java.time.LocalDateTime
 
 /**
@@ -42,34 +41,8 @@ data class FocusNow(val hidden: Set<String>, val pauses: Map<String, Int>, val h
 
 object FocusRules {
     val CATEGORIES = setOf("game", "social", "video", "audio", "image", "news", "maps", "productivity")
-    private val TIME = Regex("([01][0-9]|2[0-3]):[0-5][0-9]|24:00")
-    private val DAYS = mapOf(
-        "mon" to DayOfWeek.MONDAY, "tue" to DayOfWeek.TUESDAY, "wed" to DayOfWeek.WEDNESDAY, "thu" to DayOfWeek.THURSDAY,
-        "fri" to DayOfWeek.FRIDAY, "sat" to DayOfWeek.SATURDAY, "sun" to DayOfWeek.SUNDAY,
-    )
-    private val GROUPS = mapOf(
-        "weekdays" to setOf(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY),
-        "weekends" to setOf(DayOfWeek.SATURDAY, DayOfWeek.SUNDAY),
-    )
-
-    private fun minutes(time: String) = time.substringBefore(':').toInt() * 60 + time.substringAfter(':').toInt()
-
-    private fun days(rule: FocusRule): Set<DayOfWeek> =
-        if (rule.days.isEmpty()) DayOfWeek.entries.toSet() else rule.days.flatMap { GROUPS[it] ?: setOfNotNull(DAYS[it]) }.toSet()
-
     /** Whether the rule applies at this moment. */
-    fun isActive(rule: FocusRule, at: LocalDateTime): Boolean {
-        val now = at.hour * 60 + at.minute
-        val from = minutes(rule.from)
-        val to = minutes(rule.to)
-        val days = days(rule)
-        val today = at.dayOfWeek in days
-        return when {
-            from == to -> today
-            from < to -> today && now >= from && now < to
-            else -> (today && now >= from) || (at.dayOfWeek.minus(1) in days && now < to) // overnight
-        }
-    }
+    fun isActive(rule: FocusRule, at: LocalDateTime): Boolean = Schedule.isActive(rule.from, rule.to, rule.days, at)
 
     /** What the rules do at [at], for apps given as package name and category. */
     fun now(rules: List<FocusRule>, apps: List<Pair<String, String>>, at: LocalDateTime): FocusNow {
@@ -92,8 +65,7 @@ object FocusRules {
             if (rule.apps.isEmpty() && rule.categories.isEmpty()) add("$name needs apps or categories")
             rule.apps.filterNot(isPackage).forEach { add("$name: \"$it\" isn't a package name") }
             (rule.categories - CATEGORIES).forEach { add("$name: unknown category \"$it\". Categories: ${CATEGORIES.sorted().joinToString()}") }
-            listOf(rule.from, rule.to).filterNot { TIME.matches(it) }.forEach { add("$name: time must be HH:MM, like 09:30, not \"$it\"") }
-            (rule.days - DAYS.keys - GROUPS.keys).forEach { add("$name: unknown day \"$it\". Use mon to sun, weekdays or weekends") }
+            addAll(Schedule.validate(name, rule.from, rule.to, rule.days))
             if (rule.action !in setOf("hide", "pause")) add("$name: action must be hide or pause, not \"${rule.action}\"")
             if (rule.seconds !in 1..60) add("$name: seconds must be from 1 to 60, not ${rule.seconds}")
         }

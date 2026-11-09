@@ -3,12 +3,18 @@
 
     <!-- Lets the drawer's Uninstall open Android's own uninstall screen, which always asks first. -->
     <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
+    <!-- Lets private apps ask for the fingerprint, face or screen lock. It gives no access to anything by itself. -->
+    <uses-permission android:name="android.permission.USE_BIOMETRIC" />
 
     <!-- Lets the launcher see the apps it lists. No QUERY_ALL_PACKAGES: it only needs apps with an icon. -->
     <queries>
         <intent>
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+        <!-- Lets spoken app names find a voice that will speak, when the default one won't. -->
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE" />
         </intent>
         <!-- Lets search offer "Search the web" only when an app can do it. -->
         <intent>
@@ -66,6 +72,22 @@
             <intent-filter>
                 <action android:name="android.service.notification.NotificationListenerService" />
             </intent-filter>
+        </service>
+
+        <!-- Gestures that pull down notifications or lock the screen. Off until launcher.json uses one
+             (core/Gestures.kt), and even then it only works once the person turns it on in Accessibility. -->
+        <service
+            android:name=".core.GestureService"
+            android:enabled="false"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/gesture_service" />
         </service>
 
         <!-- Its own process, so nothing that crashed the home screen can take it down too. -->

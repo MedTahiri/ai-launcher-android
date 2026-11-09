@@ -155,6 +155,9 @@ object OpenGate {
     /** Seconds to wait before this app opens, or 0. */
     @Volatile var pauseFor: (AppEntry) -> Int = { 0 }
 
+    /** Called as an app opens, to say its name aloud when that's turned on. */
+    @Volatile var onOpen: (AppEntry) -> Unit = {}
+
     /** The app waiting behind a pause, which the home screen shows. */
     val waiting = MutableStateFlow<AppEntry?>(null)
 }
@@ -165,6 +168,7 @@ fun openApp(context: Context, app: AppEntry, now: Boolean = false) {
         OpenGate.waiting.value = app
         return
     }
+    OpenGate.onOpen(app)
     context.getSystemService(LauncherApps::class.java).startMainActivity(app.info.componentName, app.user, null, null)
 }
 

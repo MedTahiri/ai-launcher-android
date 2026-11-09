@@ -10,6 +10,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -51,7 +52,11 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.unit.dp
 import io.github.medtahiri.launcher.core.AppEntry
+import android.widget.Toast
 import io.github.medtahiri.launcher.core.FocusRules
+import io.github.medtahiri.launcher.core.Gestures
+import io.github.medtahiri.launcher.core.Profiles
+import io.github.medtahiri.launcher.core.Speech
 import io.github.medtahiri.launcher.core.OpenGate
 import io.github.medtahiri.launcher.core.categoryName
 import io.github.medtahiri.launcher.core.openApp
@@ -86,9 +91,7 @@ fun HomeScreen(
     resumes: Int,
     showHiddenApps: Boolean,
     onShowHiddenApps: () -> Unit,
-    hasPhoneChanges: Boolean,
-    onSaveSettings: (Map<String, JsonElement>) -> Unit,
-    onResetSettings: () -> Unit,
+    controls: PhoneControls,
 ) {
     val context = LocalContext.current
     val apps by remember { observeApps(context.applicationContext) }.collectAsState(initial = emptyList())
@@ -104,13 +107,32 @@ fun HomeScreen(
     val focus = remember(apps, baseConfig.focus, now) {
         FocusRules.now(baseConfig.focus.rules, apps.map { it.packageName to categoryName(it.category) }, now)
     }
+    // Private apps are always left out; apps hidden for focus, unless the person pressed Show.
     val config = remember(baseConfig, focus.hidden, showHiddenApps) {
-        if (showHiddenApps) baseConfig else baseConfig.copy(hiddenNow = focus.hidden)
+        val private = baseConfig.drawer.privateApps.toSet()
+        baseConfig.copy(hiddenNow = if (showHiddenApps) private else private + focus.hidden)
+    }
+    // A profile whose hours start or end: start again with the right one.
+    LaunchedEffect(now) {
+        val due = Profiles.active(baseConfig.profiles, controls.pickedProfile, now)?.name
+        if (due != controls.activeProfile) controls.onProfileDue()
+    }
+    SideEffect {
+        OpenGate.onOpen = if (baseConfig.home.speakAppNames) { app -> Speech.say(context, "Opening ${app.label}") } else { _ -> }
     }
     SideEffect { OpenGate.pauseFor = { focus.pauses[it.packageName] ?: 0 } }
     val waiting by OpenGate.waiting.collectAsState()
     var customizing by remember { mutableStateOf(false) }
     val openCustomize: (() -> Unit)? = if (baseConfig.home.allowCustomize) ({ customizing = true }) else null
+    val gestures = HomeGestures(baseConfig.gestures) { action ->
+        when {
+            action == "drawer" || action == "search" -> onDrawerOpenChange(true)
+            action == "customize" -> openCustomize?.invoke()
+            Gestures.isSystem(action) -> Gestures.runSystem(context, action, baseConfig.name)
+            action.startsWith("app:") -> apps.firstOrNull { it.packageName == action.removePrefix("app:") }?.let { openApp(context, it) }
+                ?: Toast.makeText(context, "That app isn't installed", Toast.LENGTH_SHORT).show()
+        }
+    }
     val focusNote = FocusNote(
         hiddenCount = if (showHiddenApps) 0 else focus.hidden.size,
         until = focus.hiddenUntil,
@@ -135,6 +157,7 @@ fun HomeScreen(
         LocalNotificationDots provides if (config.home.notificationDots) dots else emptySet(),
         LocalFocusNote provides focusNote,
         LocalOpenCustomize provides openCustomize,
+        LocalHomeGestures provides gestures,
     ) {
     Box(
         Modifier
@@ -175,16 +198,16 @@ fun HomeScreen(
     }
     if (customizing) {
         CustomizeScreen(
-            baseConfig,
+            baseConfig.copy(theme = baseConfig.theme.copy(accent = controls.accentSetting)),
             apps,
-            hasPhoneChanges,
-            onSave = {
+            controls,
+            onSave = { changes, profile ->
                 customizing = false
-                onSaveSettings(it)
+                controls.onSaveSettings(changes, profile)
             },
             onReset = {
                 customizing = false
-                onResetSettings()
+                controls.onResetSettings()
             },
             onDismiss = { customizing = false },
         )
@@ -245,25 +268,7 @@ private fun Home(
             .navigationBarsPadding()
             .padding(horizontal = 16.dp)
             .testTag("launcher-home")
-            // Long press on empty space: change the look on the phone.
-            .then(if (openCustomize != null) Modifier.pointerInput(openCustomize) { detectTapGestures(onLongPress = { openCustomize() }) } else Modifier)
-            .then(
-                if (config.home.swipeUpOpensDrawer) {
-                    Modifier.pointerInput(Unit) {
-                        val distance = 48.dp.toPx()
-                        var dragged = 0f
-                        detectVerticalDragGestures(onDragStart = { dragged = 0f }) { _, amount ->
-                            dragged += amount
-                            if (dragged < -distance) { // far enough up, however slowly
-                                dragged = 0f
-                                onOpenDrawer()
-                            }
-                        }
-                    }
-                } else {
-                    Modifier
-                },
-            ),
+            .homeGestures(config, openCustomize, onOpenDrawer),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         configProblems.forEach { Text("launcher.json: $it", color = Color(0xFFFF8A80), modifier = Modifier.padding(top = 8.dp)) }
@@ -323,4 +328,67 @@ private fun Home(
             }
         }
     }
+}
+
+/**
+ * Gestures on empty space: long press for Customize, a swipe up for the drawer, and whatever launcher.json's `gestures`
+ * set for double tap and swipes down, left and right.
+ */
+@Composable
+private fun Modifier.homeGestures(config: LauncherConfig, openCustomize: (() -> Unit)?, onOpenDrawer: () -> Unit): Modifier {
+    val gestures = LocalHomeGestures.current
+    val doubleTap = gestures.has("doubleTap")
+    val down = gestures.has("swipeDown")
+    val sideways = gestures.has("swipeLeft") || gestures.has("swipeRight")
+    return this
+        .then(
+            if (openCustomize != null || doubleTap) {
+                Modifier.pointerInput(openCustomize, doubleTap) {
+                    detectTapGestures(
+                        onLongPress = openCustomize?.let { open -> { open() } },
+                        onDoubleTap = if (doubleTap) { _ -> gestures.perform("doubleTap") } else null,
+                    )
+                }
+            } else {
+                Modifier
+            },
+        )
+        .then(
+            if (config.home.swipeUpOpensDrawer || down) {
+                Modifier.pointerInput(config.home.swipeUpOpensDrawer, down) {
+                    val distance = 48.dp.toPx()
+                    var dragged = 0f
+                    var done = false
+                    detectVerticalDragGestures(onDragStart = { dragged = 0f; done = false }) { _, amount ->
+                        dragged += amount
+                        if (done) return@detectVerticalDragGestures
+                        if (dragged < -distance && config.home.swipeUpOpensDrawer) { // far enough up, however slowly
+                            done = true
+                            onOpenDrawer()
+                        } else if (dragged > distance && down) {
+                            done = true
+                            gestures.perform("swipeDown")
+                        }
+                    }
+                }
+            } else {
+                Modifier
+            },
+        )
+        .then(
+            if (sideways) {
+                Modifier.pointerInput(Unit) {
+                    val distance = 64.dp.toPx()
+                    var dragged = 0f
+                    detectHorizontalDragGestures(
+                        onDragStart = { dragged = 0f },
+                        onDragEnd = {
+                            if (dragged > distance) gestures.perform("swipeRight") else if (dragged < -distance) gestures.perform("swipeLeft")
+                        },
+                    ) { _, amount -> dragged += amount }
+                }
+            } else {
+                Modifier
+            },
+        )
 }

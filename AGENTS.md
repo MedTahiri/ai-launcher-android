@@ -28,6 +28,9 @@ used a terminal, so explain each step simply and don't assume they know Android 
 - Adding a permission, including `INTERNET`. Say what it allows and why the feature needs it. If they agree, add it to
   both `AndroidManifest.xml` and `permissions.allow`.
 - Adding a dependency.
+- Gestures set to `notifications`, `quick_settings` or `lock`. They need Accessibility access, which Android warns
+  about strongly. The launcher's service only presses those three buttons and reads nothing, but let them decide.
+- Putting phone numbers in `launcher.json` (`contact` and `help_button` widgets). They'd be public in a published fork.
 - Turning on `home.notificationDots`. Android then asks them to allow notification access, which lets the launcher read
   their notifications. The launcher only keeps which apps have one, in memory, but say so plainly.
 - Making this the default home screen on a real phone (`tools/verify.sh --set-default`). On screen, the launcher's own
@@ -65,7 +68,7 @@ Unknown settings and invalid values, including widget options, fail `./build.sh`
 | `name` | The name on the phone | `My Launcher` |
 | `theme.mode` | `dark`, `light`, `auto` | `dark` |
 | `theme.background` | `#RRGGBB`, `wallpaper`, `auto` | `#000000` |
-| `theme.accent` | `#RRGGBB` | `#FFFFFF` |
+| `theme.accent` | `#RRGGBB`, or `wallpaper` for a color from the wallpaper, made readable on the background | `#FFFFFF` |
 | `theme.font` | `default`, `sans`, `serif`, `mono` | `default` |
 | `theme.textScale` | 0.7 to 2.5 | `1` |
 | `theme.iconPack` | Package name of an installed icon pack (`tools/apps.sh --icon-packs`). Apps it has no icon for keep theirs | none |
@@ -74,6 +77,7 @@ Unknown settings and invalid values, including widget options, fail `./build.sh`
 | `home.favorites` | Package names, in order. Apps that aren't installed are skipped | none |
 | `home.folders` | List of `{ "name": "Social", "apps": [package names] }`. In `simple`, after the favorites; in `glass`, first on the groups page. Folders with no installed app are skipped | none |
 | `home.allowCustomize` | Whether long press on the home screen (in `glass`: Edit > Customize) opens the Customize screen. Turn off for someone who shouldn't change things by accident | `true` |
+| `home.speakAppNames` | Says "Opening WhatsApp" aloud when an app opens, with the phone's own voice | `false` |
 | `home.notificationDots` | A dot on apps with notifications. Ask first (see above): it shows a banner to allow notification access | `false` |
 | `home.columns` | 1 to 8 | `4` |
 | `home.iconSize` | 24 to 160 (dp) | `56` |
@@ -89,6 +93,9 @@ Unknown settings and invalid values, including widget options, fail `./build.sh`
 | `drawer.columns` | 1 to 8 | `4` |
 | `drawer.iconSize` | 24 to 160 (dp) | `56` |
 | `drawer.showLabels` | `true`, `false` | `true` |
+| `drawer.private` | Package names of private apps: left out everywhere, and shown under "Private apps" (in the drawer, or the glass groups page) after the fingerprint, face or screen lock | none |
+| `gestures.doubleTap`, `.swipeDown`, `.swipeLeft`, `.swipeRight` | On empty home screen space: `none`, `drawer`, `search`, `customize`, `notifications`, `quick_settings`, `lock` or `app:PACKAGE`. Swipes left and right are `simple` style only. The three system ones need Accessibility access: ask first | `none` |
+| `profiles` | Other looks, by hours or picked on the phone: see below | none |
 | `focus.rules` | Focus rules: see below | none |
 | `focus.allowShowAnyway` | Whether the drawer offers "Show" for hidden apps, until the person leaves the launcher | `true` |
 | `search.calculator` | Search answers sums like `12*7` | `true` |
@@ -143,6 +150,23 @@ Each rule hides apps, or makes the person wait before opening them, during set h
 - It's friction, not a lock: apps still open from notifications or the app store. Tell the person.
 - To test a rule, set its hours around the current time rather than changing the phone's clock.
 
+### Profiles
+
+A profile changes some settings during set hours, or when the person picks it in Customize:
+
+```json
+"profiles": [
+  { "name": "Work", "from": "09:00", "to": "17:00", "days": ["weekdays"],
+    "set": { "home.favorites": ["com.slack", "com.google.android.gm"], "drawer.hidden": ["com.instagram.android"] } },
+  { "name": "Evening", "set": { "theme.mode": "light", "theme.accent": "#FFB74D" } }
+]
+```
+
+- `set` uses the paths of this table. A profile can't change `name` or `profiles`.
+- Hours and days work as in focus rules. Without `from` and `to`, it's only used when picked.
+- The first profile whose hours match is used. One picked in Customize stays until "Automatic" is picked.
+- `./build.sh` checks each profile's settings too.
+
 ### Changes made on the phone
 
 The person can change the look in the launcher's Customize screen: style, colors, font, text and icon size, columns,
@@ -161,6 +185,11 @@ clears them.
 - `calendar`: today's date on a glass card. It can't show events, since that would need the calendar permission.
 - `clock`: option `size` is `medium`, `large` (default, about a quarter of a phone's width) or `huge` (fills the width).
 - `battery`: no options.
+- `contact`: a big tile for one person. Options `name`, `phone`, and `action`: `call` (default; opens the dialer with
+  the number, one more tap to call, so no call permission), `whatsapp` or `message`. The number is in `launcher.json`:
+  ask first (see above).
+- `help_button`: a large red button that opens the dialer with `phone`, ready to press Call. Option `label` (default
+  "Call for help"). It dials rather than calls, so a stray tap calls no one.
 - `android_widget`: a widget from another app, like music, weather or a to-do list. With no options, it shows "Add a
   widget", and the person picks one on the phone. Option `provider` is a package name, to offer only that app's widgets,
   or `package/class` from `tools/apps.sh --widgets`, to add that one with a tap. Android asks the person once to allow
@@ -183,6 +212,10 @@ The launcher's own text is English, in `home/`, `widgets/` and `core/SafeModeAct
 phone's language (`adb shell settings get system system_locales`). If the launcher is for someone reading another
 language, translate the text they'll see. If you can't tell who it's for, keep English and offer to translate. Translating safe mode's
 text is a fine reason to edit `core/`; leave its layout alone.
+
+Long press on an app also lists its own shortcuts (tag `shortcut`), like search does; Android only shares them with the
+default home screen. Private apps open from `private-apps`. The Customize screen also has the profile picker and Back up
+/ Restore, which saves what was set on the phone (not widgets) to a file.
 
 The Customize screen has the tag `customize` (in `glass`, open it from the `open-customize` menu item). A focus pause
 has `focus-pause`, and the drawer's note about hidden apps `focus-hidden-note`. Search's extra results are in

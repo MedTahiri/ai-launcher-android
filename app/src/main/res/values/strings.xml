@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="gesture_service_description">Lets home screen gestures pull down notifications or quick settings, or lock the screen. It only presses those buttons, and reads nothing on the screen.</string>
+</resources>

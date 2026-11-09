@@ -54,6 +54,7 @@ fun AppDrawer(apps: List<AppEntry>, config: LauncherConfig, background: Color) {
             )
         }
         HiddenAppsNote(MaterialTheme.colorScheme.onSurfaceVariant, Modifier.padding(bottom = 4.dp))
+        PrivateAppsButton(apps, config, MaterialTheme.colorScheme.onSurfaceVariant)
         SearchExtras(
             query,
             config,

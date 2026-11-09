@@ -24,7 +24,9 @@ interface LauncherWidget {
 
 object WidgetRegistry {
     private val all: List<LauncherWidget> =
-        listOf(ClockWidget, AnalogClockWidget, CalendarWidget, BatteryWidget, FocusTimerWidget, AndroidWidget)
+        listOf(
+            ClockWidget, AnalogClockWidget, CalendarWidget, BatteryWidget, FocusTimerWidget, AndroidWidget, ContactWidget, HelpButtonWidget,
+        )
 
     val types: Set<String> = all.map { it.type }.toSet()
 
