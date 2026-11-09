@@ -53,4 +53,20 @@ class GlassLayoutTest {
         val moved = GlassLayout.moveToAdjacentPage(listOf(1, 2, 3, 4, 5, 6), 5, 3, 3, -1)
         assertEquals(listOf(listOf(1, 2, 5), listOf(3, 4, 6)), GlassLayout.pages(moved, 3, 3))
     }
+
+    @Test fun halfWidgetsShareRowsAndWideOnesTakeTheirOwn() {
+        val wide = setOf("W")
+        assertEquals(
+            listOf(listOf("a", "b"), listOf("W"), listOf("c")),
+            GlassLayout.widgetRows(listOf("a", "b", "W", "c")) { it in wide },
+        )
+    }
+
+    @Test fun aWideWidgetKeepsTheOrder() {
+        // "c" doesn't jump up next to "a", above the wide widget that comes before it.
+        assertEquals(
+            listOf(listOf("a"), listOf("W"), listOf("c", "d")),
+            GlassLayout.widgetRows(listOf("a", "W", "c", "d")) { it == "W" },
+        )
+    }
 }

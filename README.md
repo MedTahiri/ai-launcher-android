@@ -112,9 +112,12 @@ Plain words are enough. Say who it's for and what matters to you, and let the ag
 | *"A black screen with a huge clock and 5 apps."* | Settings in `launcher.json` |
 | *"Big buttons for my mother, with only WhatsApp, Phone and Photos."* | Settings in `launcher.json` |
 | *"Glass style with a warm orange accent."* | Settings in `launcher.json` |
-| *"Hide social media until 6 pm."* | New code, with tests |
+| *"Hide social media until 6 pm."* | A focus rule in `launcher.json` |
+| *"Make me wait 10 seconds before Instagram opens."* | A focus rule in `launcher.json` |
 | *"Add a widget that shows a new quote each day."* | A new widget |
-| *"Show the weather."* | A new widget, and the `INTERNET` permission, which the agent should ask you about first |
+| *"Show my weather app's widget, and put my chat apps in a folder."* | Settings in `launcher.json` |
+| *"Use my icon pack and show notification dots."* | Settings in `launcher.json`. Dots need notification access, which the agent should ask you about first |
+| *"Show the weather in a widget of its own."* | A new widget, and the `INTERNET` permission, which the agent should ask you about first |
 
 Not sure where to start? Point your agent at a [recipe](recipes/). Each one describes a kind of launcher:
 
@@ -189,7 +192,25 @@ every setting.
 
 ### Widgets
 
-Digital clock, analog clock, calendar, battery and focus timer. A new widget takes one file and one line to register it.
+Digital clock, analog clock, calendar, battery and focus timer, plus any home screen widget your other apps offer
+(music, weather, notes and so on), which you choose on the phone. A new widget of your own takes one file and one line to
+register it.
+
+### On the phone
+
+- **Customize:** long press the home screen (in glass: Edit > Customize) to change the style, colors, font, sizes,
+  favorites and more, with no computer. Your agent can read those changes back into `launcher.json`.
+- **Focus rules:** hide distracting apps during set hours, or make yourself wait a few seconds before they open. Set
+  in `launcher.json`, for example *"hide social apps on weekdays from 9 to 6"*.
+- **Search:** besides apps, it answers sums (`12*7`), opens Settings screens (*wifi*, *battery*), finds app shortcuts
+  (*new message*), and can hand a search to your browser.
+
+### Folders, icon packs and notification dots
+
+- **Folders:** named groups of apps, set in `launcher.json`.
+- **Icon packs:** any installed pack made for launchers like Nova. Apps it has no icon for keep theirs.
+- **Notification dots:** off by default. Turning them on means allowing notification access, which lets the launcher
+  read notifications; it only keeps which apps have one, in memory.
 
 ### Tools
 
@@ -199,7 +220,8 @@ Digital clock, analog clock, calendar, battery and focus timer. A new widget tak
 | `./build.sh` | Checks `launcher.json`, runs the unit tests and builds the APK |
 | `tools/verify.sh` | Builds, installs and opens the launcher on a device, looks for crashes, and saves screenshots to `.verify/` |
 | `tools/check.sh` | Runs the checks that don't need a device: unit tests, build, permissions and recipe rules |
-| `tools/apps.sh` | Lists the apps on the device, so an agent can find package names |
+| `tools/apps.sh` | Lists the apps on the device, so an agent can find package names. `--widgets` and `--icon-packs` list those |
+| `tools/phone-settings.sh` | Prints the config with the changes made in Customize on the phone, to copy into `launcher.json` |
 
 ### Project layout
 
@@ -288,14 +310,16 @@ This is a young project, and this is what has actually been tried:
 | **Devices** | Samsung Galaxy A17 on Android 16, and Galaxy A56 on Android 17. Others are untested, and older Android versions may have problems. |
 | **Computers** | Linux. macOS and Windows are untested. |
 | **Default home screen** | Tried by the maintainer on the Galaxy A17, with no problems reported. It hasn't had detailed testing, such as the Home button in each state. |
-| **Not tested yet** | The app list updating after an install or removal; work profiles; large screens; emulators. |
+| **Newer features** | On the Galaxy A56: Android widgets (adding, the picker, long press, removing), folders, focus rules (hide, "Show", pause), search (sums, Settings), Customize, and a newer `launcher.json` value replacing a phone change, in both styles. Notification dots: the permission flow only. |
+| **Not tested yet** | The app list updating after an install or removal; work profiles; large screens; emulators; icon packs; app shortcuts in search; drawing notification dots. |
 
 Tried it on something else? Please [open an issue](https://github.com/MedTahiri/ai-launcher-android/issues) with what worked
 and what didn't.
 
 ## Known limits
 
-- No user-made folders, icon packs, Android widgets or notification dots yet.
+- Folders are set in `launcher.json`, not made by dragging on the phone. Notification dots show that an app has
+  notifications, not how many.
 - Only the `glass` style has drag and drop, and icons can't be dragged into or out of the dock.
 - The focus timer makes no sound and sends no notification when it ends.
 - The calendar widget shows the date only, not your events.

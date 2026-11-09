@@ -30,6 +30,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -47,34 +51,91 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.unit.dp
 import io.github.medtahiri.launcher.core.AppEntry
+import io.github.medtahiri.launcher.core.FocusRules
+import io.github.medtahiri.launcher.core.OpenGate
+import io.github.medtahiri.launcher.core.categoryName
+import io.github.medtahiri.launcher.core.openApp
+import io.github.medtahiri.launcher.core.IconPack
+import io.github.medtahiri.launcher.core.LocalNotificationDots
+import io.github.medtahiri.launcher.core.NotificationDots
+import io.github.medtahiri.launcher.core.LocalIconPack
 import io.github.medtahiri.launcher.core.LauncherConfig
 import io.github.medtahiri.launcher.core.observeApps
 import io.github.medtahiri.launcher.core.writeAppListForTools
 import io.github.medtahiri.launcher.home.glass.GlassHome
 import io.github.medtahiri.launcher.theme.backgroundColor
-import io.github.medtahiri.launcher.widgets.WidgetRegistry
+import io.github.medtahiri.launcher.widgets.AppWidgets
+import io.github.medtahiri.launcher.widgets.WidgetAt
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.serialization.json.JsonElement
+import java.time.LocalDateTime
+import androidx.compose.foundation.gestures.detectTapGestures
 import kotlinx.coroutines.withContext
 
 /** The home screen: widgets above, favorites below, and the drawer on top when it's open. */
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun HomeScreen(
-    config: LauncherConfig,
+    baseConfig: LauncherConfig,
     configProblems: List<String>,
     drawerOpen: Boolean,
     onDrawerOpenChange: (Boolean) -> Unit,
     isDefaultLauncher: Boolean,
     homePresses: Int,
+    resumes: Int,
+    showHiddenApps: Boolean,
+    onShowHiddenApps: () -> Unit,
+    hasPhoneChanges: Boolean,
+    onSaveSettings: (Map<String, JsonElement>) -> Unit,
+    onResetSettings: () -> Unit,
 ) {
     val context = LocalContext.current
     val apps by remember { observeApps(context.applicationContext) }.collectAsState(initial = emptyList())
+
+    // Focus rules follow the clock: checked each minute, and on return, since a sleeping phone's timers don't run.
+    var now by remember { mutableStateOf(LocalDateTime.now()) }
+    LaunchedEffect(resumes) {
+        while (true) {
+            now = LocalDateTime.now()
+            delay(60_000L - System.currentTimeMillis() % 60_000L + 100)
+        }
+    }
+    val focus = remember(apps, baseConfig.focus, now) {
+        FocusRules.now(baseConfig.focus.rules, apps.map { it.packageName to categoryName(it.category) }, now)
+    }
+    val config = remember(baseConfig, focus.hidden, showHiddenApps) {
+        if (showHiddenApps) baseConfig else baseConfig.copy(hiddenNow = focus.hidden)
+    }
+    SideEffect { OpenGate.pauseFor = { focus.pauses[it.packageName] ?: 0 } }
+    val waiting by OpenGate.waiting.collectAsState()
+    var customizing by remember { mutableStateOf(false) }
+    val openCustomize: (() -> Unit)? = if (baseConfig.home.allowCustomize) ({ customizing = true }) else null
+    val focusNote = FocusNote(
+        hiddenCount = if (showHiddenApps) 0 else focus.hidden.size,
+        until = focus.hiddenUntil,
+        onShowAnyway = if (baseConfig.focus.allowShowAnyway) onShowHiddenApps else null,
+    )
+
     val debuggable = context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0
     if (debuggable) {
-        LaunchedEffect(apps) { withContext(Dispatchers.IO) { writeAppListForTools(context, apps) } }
+        LaunchedEffect(apps) {
+            withContext(Dispatchers.IO) {
+                writeAppListForTools(context, apps)
+                AppWidgets.writeListForTools(context)
+                IconPack.writeListForTools(context)
+            }
+        }
     }
     val background = backgroundColor(config.theme, isSystemInDarkTheme() && config.theme.mode == "auto" || config.theme.mode == "dark")
 
+    val dots by NotificationDots.packages.collectAsState()
+    CompositionLocalProvider(
+        LocalIconPack provides config.theme.iconPack,
+        LocalNotificationDots provides if (config.home.notificationDots) dots else emptySet(),
+        LocalFocusNote provides focusNote,
+        LocalOpenCustomize provides openCustomize,
+    ) {
     Box(
         Modifier
             .fillMaxSize()
@@ -89,7 +150,7 @@ fun HomeScreen(
 
             // Hidden from accessibility while the drawer covers it, so screen readers don't read what's behind.
             Box(if (drawerOpen) Modifier.clearAndSetSemantics {} else Modifier) {
-                Home(config, configProblems, apps, isDefaultLauncher, onOpenDrawer = { onDrawerOpenChange(true) })
+                Home(config, configProblems, apps, isDefaultLauncher, openCustomize, onOpenDrawer = { onDrawerOpenChange(true) })
             }
             AnimatedVisibility(
                 visible = drawerOpen,
@@ -100,6 +161,34 @@ fun HomeScreen(
                 AppDrawer(apps, config, background ?: MaterialTheme.colorScheme.background)
             }
         }
+        waiting?.let { app ->
+            FocusPause(
+                app,
+                seconds = focus.pauses[app.packageName] ?: 5,
+                onOpen = {
+                    OpenGate.waiting.value = null
+                    openApp(context, app, now = true)
+                },
+                onCancel = { OpenGate.waiting.value = null },
+            )
+        }
+    }
+    if (customizing) {
+        CustomizeScreen(
+            baseConfig,
+            apps,
+            hasPhoneChanges,
+            onSave = {
+                customizing = false
+                onSaveSettings(it)
+            },
+            onReset = {
+                customizing = false
+                onResetSettings()
+            },
+            onDismiss = { customizing = false },
+        )
+    }
     }
 }
 
@@ -118,12 +207,35 @@ fun DefaultPrompt(config: LauncherConfig, isDefaultLauncher: Boolean) {
     }
 }
 
+/** While notification dots are on but not allowed yet: a banner that opens the Settings screen to allow them. */
+@Composable
+fun NotificationDotsPrompt(config: LauncherConfig) {
+    if (!config.home.notificationDots) return
+    val context = LocalContext.current
+    val connected by NotificationDots.connected.collectAsState()
+    // Checked again when Android connects or disconnects, so it doesn't flash while connecting at startup.
+    val allowed = remember(connected) { connected || NotificationDots.allowed(context) }
+    if (allowed) return
+    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+        TextButton(
+            modifier = Modifier.testTag("allow-notification-dots"),
+            onClick = {
+                runCatching { context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) }
+                    .onFailure { context.startActivity(Intent(Settings.ACTION_SETTINGS)) } // a phone without that screen
+            },
+        ) {
+            Text("Allow notification dots: find ${config.name} and turn it on")
+        }
+    }
+}
+
 @Composable
 private fun Home(
     config: LauncherConfig,
     configProblems: List<String>,
     apps: List<AppEntry>,
     isDefaultLauncher: Boolean,
+    openCustomize: (() -> Unit)?,
     onOpenDrawer: () -> Unit,
 ) {
     Column(
@@ -133,6 +245,8 @@ private fun Home(
             .navigationBarsPadding()
             .padding(horizontal = 16.dp)
             .testTag("launcher-home")
+            // Long press on empty space: change the look on the phone.
+            .then(if (openCustomize != null) Modifier.pointerInput(openCustomize) { detectTapGestures(onLongPress = { openCustomize() }) } else Modifier)
             .then(
                 if (config.home.swipeUpOpensDrawer) {
                     Modifier.pointerInput(Unit) {
@@ -154,6 +268,7 @@ private fun Home(
     ) {
         configProblems.forEach { Text("launcher.json: $it", color = Color(0xFFFF8A80), modifier = Modifier.padding(top = 8.dp)) }
         DefaultPrompt(config, isDefaultLauncher)
+        NotificationDotsPrompt(config)
         // Widgets centered above the favorites; it all scrolls if it doesn't fit (large text, or a small screen).
         BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
             val scroll = rememberScrollState()
@@ -171,21 +286,26 @@ private fun Home(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(24.dp),
                 ) {
-                    config.home.widgets.forEach { widget ->
-                        Box(Modifier.testTag("widget-${widget.type}")) { WidgetRegistry.find(widget.type)?.Content(widget) }
+                    config.home.widgets.forEachIndexed { index, widget ->
+                        Box(Modifier.testTag("widget-${widget.type}")) { WidgetAt(config.home.widgets, index, fillsArea = false) }
                     }
                 }
                 Column(verticalArrangement = Arrangement.spacedBy(config.home.spacing.dp)) {
-                    favorites(apps, config).chunked(config.home.columns).forEach { row ->
+                    // Favorites, then folders, in one grid.
+                    val items: List<Any> = favorites(apps, config) + folders(apps, config)
+                    items.chunked(config.home.columns).forEach { row ->
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(config.home.spacing.dp)) {
                             row.forEach {
-                                AppIcon(
-                                    it,
-                                    config.home.iconSize,
-                                    config.home.showLabels,
-                                    config.home.allowUninstall,
-                                    Modifier.weight(1f).testTag("favorite-${it.packageName}"),
-                                )
+                                when (it) {
+                                    is AppEntry -> AppIcon(
+                                        it,
+                                        config.home.iconSize,
+                                        config.home.showLabels,
+                                        config.home.allowUninstall,
+                                        Modifier.weight(1f).testTag("favorite-${it.packageName}"),
+                                    )
+                                    is Folder -> FolderIcon(it, config, Modifier.weight(1f).testTag("folder-${it.name}"))
+                                }
                             }
                             repeat(config.home.columns - row.size) { Spacer(Modifier.weight(1f)) }
                         }

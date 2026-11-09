@@ -22,10 +22,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.medtahiri.launcher.core.AppEntry
+import io.github.medtahiri.launcher.core.LocalNotificationDots
+import io.github.medtahiri.launcher.core.NotificationDot
 import io.github.medtahiri.launcher.core.openApp
 import io.github.medtahiri.launcher.core.openAppInfo
 import io.github.medtahiri.launcher.core.rememberAppIcon
@@ -34,7 +37,14 @@ import io.github.medtahiri.launcher.core.uninstallApp
 /** An app's icon and label. Press opens it; long press offers App info and Uninstall. */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun AppIcon(app: AppEntry, iconSize: Int, showLabel: Boolean, allowUninstall: Boolean, modifier: Modifier = Modifier) {
+fun AppIcon(
+    app: AppEntry,
+    iconSize: Int,
+    showLabel: Boolean,
+    allowUninstall: Boolean,
+    modifier: Modifier = Modifier,
+    onOpened: () -> Unit = {},
+) {
     val context = LocalContext.current
     var menuOpen by remember { mutableStateOf(false) }
     val sizePx = with(LocalDensity.current) { iconSize.dp.roundToPx() }
@@ -46,7 +56,7 @@ fun AppIcon(app: AppEntry, iconSize: Int, showLabel: Boolean, allowUninstall: Bo
                 .combinedClickable(
                     onClickLabel = "Open ${app.label}",
                     onLongClick = { menuOpen = true },
-                    onClick = { openApp(context, app) },
+                    onClick = { openApp(context, app); onOpened() },
                 )
                 .padding(vertical = 8.dp, horizontal = 4.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -54,6 +64,9 @@ fun AppIcon(app: AppEntry, iconSize: Int, showLabel: Boolean, allowUninstall: Bo
         ) {
             Box(Modifier.size(iconSize.dp)) {
                 icon?.let { Image(it, contentDescription = app.label, modifier = Modifier.size(iconSize.dp)) }
+                if (app.packageName in LocalNotificationDots.current) {
+                    NotificationDot(Modifier.align(Alignment.TopEnd).testTag("dot-${app.packageName}"), (iconSize / 4.5f).dp)
+                }
             }
             if (showLabel) {
                 Text(

@@ -28,6 +28,8 @@ used a terminal, so explain each step simply and don't assume they know Android 
 - Adding a permission, including `INTERNET`. Say what it allows and why the feature needs it. If they agree, add it to
   both `AndroidManifest.xml` and `permissions.allow`.
 - Adding a dependency.
+- Turning on `home.notificationDots`. Android then asks them to allow notification access, which lets the launcher read
+  their notifications. The launcher only keeps which apps have one, in memory, but say so plainly.
 - Making this the default home screen on a real phone (`tools/verify.sh --set-default`). On screen, the launcher's own
   banner also does this.
 - Uninstalling anything, which `verify.sh` may suggest if a copy with a different signature is installed. It erases that
@@ -66,9 +68,13 @@ Unknown settings and invalid values, including widget options, fail `./build.sh`
 | `theme.accent` | `#RRGGBB` | `#FFFFFF` |
 | `theme.font` | `default`, `sans`, `serif`, `mono` | `default` |
 | `theme.textScale` | 0.7 to 2.5 | `1` |
+| `theme.iconPack` | Package name of an installed icon pack (`tools/apps.sh --icon-packs`). Apps it has no icon for keep theirs | none |
 | `home.style` | `simple` or `glass` (see below) | `simple` |
 | `home.widgets` | List of `{ "type": ..., "options": { ... } }` | none |
 | `home.favorites` | Package names, in order. Apps that aren't installed are skipped | none |
+| `home.folders` | List of `{ "name": "Social", "apps": [package names] }`. In `simple`, after the favorites; in `glass`, first on the groups page. Folders with no installed app are skipped | none |
+| `home.allowCustomize` | Whether long press on the home screen (in `glass`: Edit > Customize) opens the Customize screen. Turn off for someone who shouldn't change things by accident | `true` |
+| `home.notificationDots` | A dot on apps with notifications. Ask first (see above): it shows a banner to allow notification access | `false` |
 | `home.columns` | 1 to 8 | `4` |
 | `home.iconSize` | 24 to 160 (dp) | `56` |
 | `home.showLabels` | `true`, `false` | `true` |
@@ -83,6 +89,12 @@ Unknown settings and invalid values, including widget options, fail `./build.sh`
 | `drawer.columns` | 1 to 8 | `4` |
 | `drawer.iconSize` | 24 to 160 (dp) | `56` |
 | `drawer.showLabels` | `true`, `false` | `true` |
+| `focus.rules` | Focus rules: see below | none |
+| `focus.allowShowAnyway` | Whether the drawer offers "Show" for hidden apps, until the person leaves the launcher | `true` |
+| `search.calculator` | Search answers sums like `12*7` | `true` |
+| `search.settings` | Search finds Settings screens, like Wi-Fi or Battery | `true` |
+| `search.shortcuts` | Search finds app shortcuts, like "New message". Android only gives them to the default home screen | `true` |
+| `search.web` | Search offers "Search the web", which hands the words to the phone's browser or search app | `true` |
 
 ### Styles
 
@@ -106,12 +118,55 @@ Unknown settings and invalid values, including widget options, fail `./build.sh`
     press with `adb -s DEVICE shell input swipe X Y X Y 1000`, press "Edit home screen", read the positions again, and
     drag with `adb -s DEVICE shell input swipe X1 Y1 X2 Y2 1500`.
 
+### Focus rules
+
+Each rule hides apps, or makes the person wait before opening them, during set hours:
+
+```json
+"focus": {
+  "rules": [
+    { "categories": ["social", "video"], "from": "09:00", "to": "18:00", "days": ["weekdays"] },
+    { "apps": ["com.instagram.android"], "action": "pause", "seconds": 10 }
+  ]
+}
+```
+
+- `apps` (package names) and `categories` (`game`, `social`, `video`, `audio`, `image`, `news`, `maps`,
+  `productivity`) choose the apps. Categories are what apps report, so check them with `tools/apps.sh`.
+- `from` and `to` are `HH:MM`; `to` can be `24:00`. A rule from 22:00 to 07:00 runs overnight. Leaving both out means
+  all day.
+- `days`: `mon` to `sun`, `weekdays`, `weekends`. Leaving it out means every day. An overnight rule belongs to the day
+  it starts.
+- `action`: `hide` (default) takes the apps off the home screen, folders, dock, drawer and search, and the drawer says
+  how many are hidden, with "Show". `pause` shows "Take a breath" and a countdown of `seconds` (1 to 60, default 5)
+  before the app opens.
+- It's friction, not a lock: apps still open from notifications or the app store. Tell the person.
+- To test a rule, set its hours around the current time rather than changing the phone's clock.
+
+### Changes made on the phone
+
+The person can change the look in the launcher's Customize screen: style, colors, font, text and icon size, columns,
+labels, notification dots and favorites (the dock in `glass`). These are kept on the phone on top of `launcher.json`.
+When a new build changes one of those same settings in `launcher.json`, the new value wins and the phone's change is
+dropped; other phone changes stay.
+
+So before editing `launcher.json` for someone who may have used Customize, run `tools/phone-settings.sh [-s DEVICE]`. It
+prints the config as the phone has it. Copy the values they chose into `launcher.json` unless they asked to change
+them, so the launcher doesn't jump back to old ones. "Undo all changes made on this phone" at the bottom of Customize
+clears them.
+
 ### Widgets
 
 - `analog_clock`: a clock with hands, on a glass card.
 - `calendar`: today's date on a glass card. It can't show events, since that would need the calendar permission.
 - `clock`: option `size` is `medium`, `large` (default, about a quarter of a phone's width) or `huge` (fills the width).
 - `battery`: no options.
+- `android_widget`: a widget from another app, like music, weather or a to-do list. With no options, it shows "Add a
+  widget", and the person picks one on the phone. Option `provider` is a package name, to offer only that app's widgets,
+  or `package/class` from `tools/apps.sh --widgets`, to add that one with a tap. Android asks the person once to allow
+  the launcher to add widgets. `height` is 48 to 480 (dp) in `simple`; in `glass` it takes a whole row unless `width` is
+  `half`. Long press it to change or remove it. Widget providers differ between phones, so list them, don't guess.
+  `verify.sh` sees the slot (`widget-android_widget`) but not what's in it: check the screenshot.
 - `focus_timer`: option `minutes`, from 1 to 600. It shows "Focus done" when you come back to it, but it makes no sound
   and sends no notification. An alert would need a notification permission and a background alarm, so ask first.
 
@@ -128,6 +183,10 @@ The launcher's own text is English, in `home/`, `widgets/` and `core/SafeModeAct
 phone's language (`adb shell settings get system system_locales`). If the launcher is for someone reading another
 language, translate the text they'll see. If you can't tell who it's for, keep English and offer to translate. Translating safe mode's
 text is a fine reason to edit `core/`; leave its layout alone.
+
+The Customize screen has the tag `customize` (in `glass`, open it from the `open-customize` menu item). A focus pause
+has `focus-pause`, and the drawer's note about hidden apps `focus-hidden-note`. Search's extra results are in
+`search-extras`. Folders have the tag `folder-<name>`, and an open folder `open-folder`. Notification dots have `dot-<package>`.
 
 ## Adding a widget
 

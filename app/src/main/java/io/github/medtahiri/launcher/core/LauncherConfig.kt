@@ -2,6 +2,7 @@ package io.github.medtahiri.launcher.core
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.intOrNull
@@ -13,6 +14,23 @@ data class LauncherConfig(
     val theme: ThemeConfig = ThemeConfig(),
     val home: HomeConfig = HomeConfig(),
     val drawer: DrawerConfig = DrawerConfig(),
+    val focus: FocusConfig = FocusConfig(),
+    val search: SearchConfig = SearchConfig(),
+    /** Apps the focus rules hide right now. Worked out on the phone, never read from launcher.json. */
+    @Transient val hiddenNow: Set<String> = emptySet(),
+)
+
+/** What search finds besides apps. */
+@Serializable
+data class SearchConfig(
+    /** Answers sums like 12*7. */
+    val calculator: Boolean = true,
+    /** Settings screens, like Wi-Fi or Battery. */
+    val settings: Boolean = true,
+    /** App shortcuts, like "New message". Android only shares them with the default home screen. */
+    val shortcuts: Boolean = true,
+    /** "Search the web", which hands the words to the phone's browser or search app. */
+    val web: Boolean = true,
 )
 
 @Serializable
@@ -27,6 +45,8 @@ data class ThemeConfig(
     val font: String = "default",
     /** Multiplies all text: 1.0 is normal. */
     val textScale: Float = 1f,
+    /** The package name of an installed icon pack, or "" for each app's own icon. */
+    val iconPack: String = "",
 )
 
 @Serializable
@@ -36,6 +56,8 @@ data class HomeConfig(
     val widgets: List<WidgetConfig> = emptyList(),
     /** Package names, in order. Apps that aren't installed are skipped. */
     val favorites: List<String> = emptyList(),
+    /** Named groups of apps: after the favorites in the simple style, and first on the groups page in the glass style. */
+    val folders: List<FolderConfig> = emptyList(),
     val columns: Int = 4,
     /** In dp. */
     val iconSize: Int = 56,
@@ -49,6 +71,17 @@ data class HomeConfig(
     val swipeUpOpensDrawer: Boolean = true,
     /** Whether long-pressing an app offers Uninstall. */
     val allowUninstall: Boolean = true,
+    /** A dot on apps with notifications. Needs the person to allow notification access, which the launcher asks for. */
+    val notificationDots: Boolean = false,
+    /** Whether long press on the home screen offers Customize, for changing the look on the phone. */
+    val allowCustomize: Boolean = true,
+)
+
+@Serializable
+data class FolderConfig(
+    val name: String,
+    /** Package names, in order. Apps that aren't installed are skipped, and a folder with none isn't shown. */
+    val apps: List<String>,
 )
 
 @Serializable
@@ -121,7 +154,18 @@ private fun validate(
             addAll(validateWidget(it).map { problem -> "home.widgets: ${it.type}: $problem" })
         }
     }
-    (c.home.favorites + c.drawer.hidden + c.drawer.only).filterNot { PACKAGE_NAME.matches(it) }.forEach {
+    c.home.folders.forEach { folder ->
+        if (folder.name.isBlank()) add("home.folders: a folder needs a name")
+        if (folder.apps.isEmpty()) add("home.folders: \"${folder.name}\" has no apps")
+    }
+    c.home.folders.groupBy { it.name.trim().lowercase() }.filter { it.value.size > 1 }.forEach {
+        add("home.folders: two folders are called \"${it.value.first().name}\"")
+    }
+    addAll(FocusRules.validate(c.focus) { PACKAGE_NAME.matches(it) })
+    if (c.theme.iconPack.isNotEmpty() && !PACKAGE_NAME.matches(c.theme.iconPack)) {
+        add("theme.iconPack must be a package name (tools/apps.sh --icon-packs lists them), not \"${c.theme.iconPack}\"")
+    }
+    (c.home.favorites + c.home.folders.flatMap { it.apps } + c.drawer.hidden + c.drawer.only).filterNot { PACKAGE_NAME.matches(it) }.forEach {
         add("\"$it\" isn't a package name (like com.android.chrome)")
     }
 }

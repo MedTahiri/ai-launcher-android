@@ -30,6 +30,20 @@ object GlassLayout {
         return listOf(first) + items.drop(first.size).chunked(otherPageSlots.coerceAtLeast(1))
     }
 
+    /** Groups widgets into rows of the first page: two to a row, except a wide one, which has a row to itself. */
+    fun <T> widgetRows(widgets: List<T>, isWide: (T) -> Boolean): List<List<T>> {
+        val rows = mutableListOf<List<T>>()
+        var openRow = -1 // a row with one half widget, waiting for a second
+        for (widget in widgets) {
+            when {
+                isWide(widget) -> { rows += listOf(widget); openRow = -1 } // keeps the order: nothing jumps above it
+                openRow < 0 -> { openRow = rows.size; rows += listOf(widget) }
+                else -> { rows[openRow] = rows[openRow] + widget; openRow = -1 }
+            }
+        }
+        return rows
+    }
+
     /** The page slot under a point, clamped to the slots that are in use. */
     fun slotAt(x: Float, y: Float, cellWidth: Float, cellHeight: Float, columns: Int, used: Int): Int {
         val column = (x / cellWidth).toInt().coerceIn(0, columns - 1)

@@ -47,6 +47,8 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.medtahiri.launcher.core.AppEntry
+import io.github.medtahiri.launcher.home.HiddenAppsNote
+import io.github.medtahiri.launcher.home.SearchExtras
 import io.github.medtahiri.launcher.core.LauncherConfig
 import io.github.medtahiri.launcher.core.openApp
 import io.github.medtahiri.launcher.home.visibleInDrawer
@@ -161,6 +163,18 @@ fun GlassSearch(
                 }
             }
         }
+        if (query.isNotBlank()) {
+            SearchExtras(
+                query,
+                config,
+                remember(apps, config) { visibleInDrawer(apps, config, "").map { it.packageName }.toSet() },
+                Color.White,
+                GlassSecondaryText,
+                onDone = close,
+                modifier = Modifier.padding(top = 4.dp).clip(CardShape).background(GlassMenu),
+            )
+        }
+        HiddenAppsNote(GlassSecondaryText, Modifier.padding(top = 8.dp))
         SectionTitle(if (query.isBlank()) "All apps" else "Apps")
         if (results.isEmpty()) {
             Text("No results", color = GlassSecondaryText, fontSize = 17.sp, modifier = Modifier.padding(top = 24.dp).align(Alignment.CenterHorizontally))

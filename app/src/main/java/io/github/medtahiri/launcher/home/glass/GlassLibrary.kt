@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.medtahiri.launcher.core.AppEntry
+import io.github.medtahiri.launcher.home.Folder
 import io.github.medtahiri.launcher.theme.GlassSecondaryText
 import io.github.medtahiri.launcher.theme.glassSurface
 
@@ -61,13 +62,16 @@ fun GlassLibraryPage(
     suggestions: List<AppEntry>,
     callbacks: IconCallbacks,
     onOpenSearch: () -> Unit,
+    folders: List<Folder> = emptyList(),
     onOpenGroup: (String, List<AppEntry>) -> Unit,
 ) {
-    val groups = remember(apps, suggestions) {
+    // Keys are kept apart, since a folder can have the same name as a category.
+    val groups = remember(apps, suggestions, folders) {
         val grouped = categories.map { (title, values) -> title to apps.filter { it.category in values } }
         val placed = grouped.flatMap { it.second }.toSet()
-        (listOf("Suggestions" to (suggestions + apps).distinct().take(4)) + grouped + ("Other" to apps.filter { it !in placed }))
+        val automatic = (listOf("Suggestions" to (suggestions + apps).distinct().take(4)) + grouped + ("Other" to apps.filter { it !in placed }))
             .filter { it.second.isNotEmpty() }
+        folders.map { Triple("folder:${it.name}", it.name, it.apps) } + automatic.map { Triple("group:${it.first}", it.first, it.second) }
     }
     LazyVerticalGrid(
         columns = GridCells.Fixed(2),
@@ -103,7 +107,7 @@ fun GlassLibraryPage(
                 Text("All apps", color = GlassSecondaryText, fontSize = 16.sp)
             }
         }
-        items(groups, key = { it.first }) { (title, groupApps) ->
+        items(groups, key = { it.first }) { (_, title, groupApps) ->
             GroupCard(title, groupApps, callbacks, onOpenGroup)
         }
     }

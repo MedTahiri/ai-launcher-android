@@ -8,6 +8,7 @@ import java.text.Normalizer
 fun visibleInDrawer(apps: List<AppEntry>, config: LauncherConfig, query: String): List<AppEntry> =
     apps.filter { app ->
         app.packageName !in config.drawer.hidden &&
+            app.packageName !in config.hiddenNow &&
             (config.drawer.only.isEmpty() || app.packageName in config.drawer.only) &&
             matchesSearch(app.label, query)
     }
@@ -21,4 +22,13 @@ private fun plainText(text: String): String =
 
 /** The home screen's favorites, in launcher.json's order. A package with several icons shows its first. */
 fun favorites(apps: List<AppEntry>, config: LauncherConfig): List<AppEntry> =
-    config.home.favorites.mapNotNull { pkg -> apps.firstOrNull { it.packageName == pkg } }
+    config.home.favorites.filter { it !in config.hiddenNow }.mapNotNull { pkg -> apps.firstOrNull { it.packageName == pkg } }
+
+/** A folder from launcher.json, with the apps of it that are installed. */
+data class Folder(val name: String, val apps: List<AppEntry>)
+
+/** The folders that have at least one installed app, in launcher.json's order. */
+fun folders(apps: List<AppEntry>, config: LauncherConfig): List<Folder> =
+    config.home.folders
+        .map { folder -> Folder(folder.name.trim(), folder.apps.distinct().filter { it !in config.hiddenNow }.mapNotNull { pkg -> apps.firstOrNull { it.packageName == pkg } }) }
+        .filter { it.apps.isNotEmpty() }

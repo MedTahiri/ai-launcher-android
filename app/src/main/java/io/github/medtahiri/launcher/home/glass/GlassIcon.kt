@@ -44,6 +44,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -52,6 +53,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.medtahiri.launcher.core.AppEntry
+import io.github.medtahiri.launcher.core.LocalNotificationDots
+import io.github.medtahiri.launcher.core.NotificationDot
 import io.github.medtahiri.launcher.core.openApp
 import io.github.medtahiri.launcher.core.rememberAppIcon
 import io.github.medtahiri.launcher.theme.SoftSquareShape
@@ -133,6 +136,9 @@ fun GlassIcon(
     ) {
         Box {
             GlassIconImage(app, iconSize, Modifier.onGloballyPositioned { bounds = it.boundsInRoot() })
+            if (app.packageName in LocalNotificationDots.current && !callbacks.wiggling) {
+                NotificationDot(Modifier.align(Alignment.TopEnd).offset(3.dp, (-3).dp).testTag("dot-${app.packageName}"), iconSize / 4.5f)
+            }
             if (pressed && !callbacks.wiggling) {
                 Box(Modifier.size(iconSize).clip(SoftSquareShape).background(Color.Black.copy(alpha = 0.3f)))
             }
