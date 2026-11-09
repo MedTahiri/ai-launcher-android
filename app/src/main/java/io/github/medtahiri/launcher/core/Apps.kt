@@ -27,6 +27,7 @@ import androidx.core.graphics.drawable.toBitmap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.launch
@@ -57,6 +58,7 @@ fun observeApps(context: Context): Flow<List<AppEntry>> = callbackFlow {
     val launcherApps = context.getSystemService(LauncherApps::class.java)
     fun reload() {
         IconCache.clear()
+        IconPack.forget() // the pack itself may be what was updated
         launch { send(loadApps(context)) }
     }
     val callback = object : LauncherApps.Callback() {
@@ -85,13 +87,20 @@ private object IconCache {
 @Composable
 fun rememberAppIcon(app: AppEntry, sizePx: Int, fullBleed: Boolean = false): ImageBitmap? {
     val context = LocalContext.current
-    val cacheKey = "${app.key}@$sizePx/$fullBleed"
+    val iconPack = LocalIconPack.current
+    val cacheKey = "${app.key}@$sizePx/$fullBleed/$iconPack"
     // Keyed, so that a list position that now holds another app can never keep showing the old app's icon.
     var icon by remember(cacheKey) { mutableStateOf(IconCache[cacheKey]) }
     LaunchedEffect(cacheKey) {
         if (icon == null) {
             icon = withContext(Dispatchers.Default) {
-                val bitmap = if (fullBleed) fullBleedIcon(context, app, sizePx) else app.info.getBadgedIcon(0).toBitmap(sizePx, sizePx)
+                val fromPack = IconPack.load(context, iconPack)?.iconFor(app)
+                val bitmap = when {
+                    // A pack's icon already has its shape: it's drawn as it is, with the work badge if there is one.
+                    fromPack != null -> context.packageManager.getUserBadgedIcon(fromPack, app.user).toBitmap(sizePx, sizePx)
+                    fullBleed -> fullBleedIcon(context, app, sizePx)
+                    else -> app.info.getBadgedIcon(0).toBitmap(sizePx, sizePx)
+                }
                 bitmap.asImageBitmap().also { IconCache[cacheKey] = it }
             }
         }
@@ -129,7 +138,7 @@ fun writeAppListForTools(context: Context, apps: List<AppEntry>) {
     )
 }
 
-private fun categoryName(category: Int) = when (category) {
+fun categoryName(category: Int) = when (category) {
     ApplicationInfo.CATEGORY_GAME -> "game"
     ApplicationInfo.CATEGORY_AUDIO -> "audio"
     ApplicationInfo.CATEGORY_VIDEO -> "video"
@@ -141,7 +150,21 @@ private fun categoryName(category: Int) = when (category) {
     else -> "other"
 }
 
-fun openApp(context: Context, app: AppEntry) {
+/** Lets focus rules make the person wait before some apps open. The home screen sets it; every way of opening uses it. */
+object OpenGate {
+    /** Seconds to wait before this app opens, or 0. */
+    @Volatile var pauseFor: (AppEntry) -> Int = { 0 }
+
+    /** The app waiting behind a pause, which the home screen shows. */
+    val waiting = MutableStateFlow<AppEntry?>(null)
+}
+
+/** Opens the app, unless a focus rule pauses it first; [now] skips that, after the pause. */
+fun openApp(context: Context, app: AppEntry, now: Boolean = false) {
+    if (!now && OpenGate.pauseFor(app) > 0) {
+        OpenGate.waiting.value = app
+        return
+    }
     context.getSystemService(LauncherApps::class.java).startMainActivity(app.info.componentName, app.user, null, null)
 }
 

@@ -76,9 +76,13 @@ import io.github.medtahiri.launcher.core.AppEntry
 import io.github.medtahiri.launcher.core.LauncherConfig
 import io.github.medtahiri.launcher.core.uninstallApp
 import io.github.medtahiri.launcher.home.DefaultPrompt
+import io.github.medtahiri.launcher.home.LocalOpenCustomize
+import io.github.medtahiri.launcher.home.NotificationDotsPrompt
 import io.github.medtahiri.launcher.home.visibleInDrawer
 import io.github.medtahiri.launcher.theme.GlassFill
 import io.github.medtahiri.launcher.theme.glassSurface
+import io.github.medtahiri.launcher.home.folders
+import io.github.medtahiri.launcher.widgets.WidgetAt
 import io.github.medtahiri.launcher.widgets.WidgetRegistry
 import kotlinx.coroutines.launch
 
@@ -171,6 +175,7 @@ fun GlassHome(
         ) {
             configProblems.forEach { Text("launcher.json: $it", color = Color(0xFFFF8A80), modifier = Modifier.padding(8.dp)) }
             DefaultPrompt(config, isDefaultLauncher)
+            NotificationDotsPrompt(config)
             EditBar(wiggling, onDone = { wiggling = false })
             BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
                 val gridHeight = maxHeight - IndicatorHeight - DockHeight - DockBottomGap
@@ -178,7 +183,7 @@ fun GlassHome(
                 val minCell = (config.home.iconSize + 40).dp * config.theme.textScale.coerceAtLeast(1f)
                 val rows = (gridHeight / minCell).toInt().coerceAtLeast(3)
                 val cellHeight = gridHeight / rows
-                val widgetRows = config.home.widgets.chunked(2)
+                val widgetRows = GlassLayout.widgetRows(config.home.widgets.indices.toList()) { WidgetRegistry.isWide(config.home.widgets[it]) }
                 val firstRows = (rows - widgetRows.size * 2).coerceAtLeast(0)
                 val pages = remember(arranged, rows, columns, firstRows) {
                     GlassLayout.pages(arranged, firstRows * columns, rows * columns)
@@ -237,7 +242,7 @@ fun GlassHome(
                                     },
                             )
                         } else {
-                            GlassLibraryPage(apps, suggestions, callbacks, { onSearchOpenChange(true) }) { title, list ->
+                            GlassLibraryPage(apps, suggestions, callbacks, { onSearchOpenChange(true) }, folders(apps, config)) { title, list ->
                                 group = OpenGroup(title, list)
                             }
                         }
@@ -322,14 +327,15 @@ private fun GlassPage(
             )
 
             Column(Modifier.fillMaxWidth()) {
-                config.home.widgets.chunked(2).take(widgetRows).forEach { row ->
+                val widgets = config.home.widgets
+                GlassLayout.widgetRows(widgets.indices.toList()) { WidgetRegistry.isWide(widgets[it]) }.take(widgetRows).forEach { row ->
                     Row(Modifier.fillMaxWidth().height(cellHeight * 2)) {
-                        row.forEach { widget ->
+                        row.forEach { index ->
                             Box(
-                                Modifier.weight(1f).fillMaxHeight().padding(10.dp).testTag("widget-${widget.type}"),
+                                Modifier.weight(1f).fillMaxHeight().padding(10.dp).testTag("widget-${widgets[index].type}"),
                                 contentAlignment = Alignment.Center,
                             ) {
-                                WidgetRegistry.find(widget.type)?.Content(widget)
+                                WidgetAt(widgets, index, fillsArea = true)
                             }
                         }
                     }
@@ -470,6 +476,16 @@ private fun EditBar(visible: Boolean, onDone: () -> Unit) {
         Box(Modifier.align(Alignment.CenterStart)) {
             GlassPill("Edit") { menuOpen = true }
             DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                LocalOpenCustomize.current?.let { openCustomize ->
+                    DropdownMenuItem(
+                        text = { Text("Customize") },
+                        modifier = Modifier.testTag("open-customize"),
+                        onClick = {
+                            menuOpen = false
+                            openCustomize()
+                        },
+                    )
+                }
                 DropdownMenuItem(
                     text = { Text("Wallpaper") },
                     onClick = {

@@ -53,6 +53,15 @@ fun AppDrawer(apps: List<AppEntry>, config: LauncherConfig, background: Color) {
                 modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp).testTag("drawer-search"),
             )
         }
+        HiddenAppsNote(MaterialTheme.colorScheme.onSurfaceVariant, Modifier.padding(bottom = 4.dp))
+        SearchExtras(
+            query,
+            config,
+            remember(apps, config) { visibleInDrawer(apps, config, "").map { it.packageName }.toSet() },
+            MaterialTheme.colorScheme.onBackground,
+            MaterialTheme.colorScheme.onSurfaceVariant,
+            onDone = { query = "" },
+        )
         if (shown.isEmpty()) {
             Text("No apps found", color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(16.dp))
         }
