@@ -1,5 +1,7 @@
 package io.github.medtahiri.launcher.widgets
 
+import androidx.compose.ui.res.stringResource
+import io.github.medtahiri.launcher.R
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -41,7 +43,7 @@ fun contact(context: Context, phone: String, action: String) {
         else -> Intent(Intent.ACTION_DIAL, Uri.parse("tel:$digits"))
     }
     runCatching { context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
-        .onFailure { Toast.makeText(context, "No app on this phone can do that", Toast.LENGTH_SHORT).show() }
+        .onFailure { Toast.makeText(context, R.string.no_app_can, Toast.LENGTH_SHORT).show() }
 }
 
 /**
@@ -66,7 +68,7 @@ object ContactWidget : LauncherWidget {
         val context = LocalContext.current
         val name = config.string("name", "")
         val action = config.string("action", "call")
-        val verb = when (action) { "whatsapp" -> "WhatsApp"; "message" -> "Message"; else -> "Call" }
+        val verb = stringResource(when (action) { "whatsapp" -> R.string.contact_whatsapp; "message" -> R.string.contact_message; else -> R.string.contact_call })
         val color = Color(TILE_COLORS[name.hashCode().mod(TILE_COLORS.size)])
         Row(
             Modifier
@@ -108,7 +110,7 @@ object HelpButtonWidget : LauncherWidget {
     @Composable
     override fun Content(config: WidgetConfig) {
         val context = LocalContext.current
-        val label = config.string("label", "Call for help")
+        val label = config.string("label", stringResource(R.string.call_for_help))
         Box(
             Modifier
                 .fillMaxWidth()

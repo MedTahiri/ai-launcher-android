@@ -1,5 +1,7 @@
 package io.github.medtahiri.launcher.home
 
+import androidx.compose.ui.res.stringResource
+import io.github.medtahiri.launcher.R
 import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.provider.Settings
@@ -118,7 +120,7 @@ fun HomeScreen(
         if (due != controls.activeProfile) controls.onProfileDue()
     }
     SideEffect {
-        OpenGate.onOpen = if (baseConfig.home.speakAppNames) { app -> Speech.say(context, "Opening ${app.label}") } else { _ -> }
+        OpenGate.onOpen = if (baseConfig.home.speakAppNames) { app -> Speech.say(context, context.getString(R.string.speak_opening, app.label)) } else { _ -> }
     }
     SideEffect { OpenGate.pauseFor = { focus.pauses[it.packageName] ?: 0 } }
     val waiting by OpenGate.waiting.collectAsState()
@@ -130,7 +132,7 @@ fun HomeScreen(
             action == "customize" -> openCustomize?.invoke()
             Gestures.isSystem(action) -> Gestures.runSystem(context, action, baseConfig.name)
             action.startsWith("app:") -> apps.firstOrNull { it.packageName == action.removePrefix("app:") }?.let { openApp(context, it) }
-                ?: Toast.makeText(context, "That app isn't installed", Toast.LENGTH_SHORT).show()
+                ?: Toast.makeText(context, R.string.app_not_installed, Toast.LENGTH_SHORT).show()
         }
     }
     val focusNote = FocusNote(
@@ -225,7 +227,7 @@ fun DefaultPrompt(config: LauncherConfig, isDefaultLauncher: Boolean) {
             modifier = Modifier.testTag("set-default"),
             onClick = { context.startActivity(Intent(Settings.ACTION_HOME_SETTINGS)) },
         ) {
-            Text("Make ${config.name} your home screen")
+            Text(stringResource(R.string.home_set_default, config.name))
         }
     }
 }
@@ -247,7 +249,7 @@ fun NotificationDotsPrompt(config: LauncherConfig) {
                     .onFailure { context.startActivity(Intent(Settings.ACTION_SETTINGS)) } // a phone without that screen
             },
         ) {
-            Text("Allow notification dots: find ${config.name} and turn it on")
+            Text(stringResource(R.string.home_allow_dots, config.name))
         }
     }
 }
@@ -320,11 +322,11 @@ private fun Home(
         }
         if (config.home.drawerButton == "button") {
             Button(onClick = onOpenDrawer, modifier = Modifier.fillMaxWidth().heightIn(min = 64.dp).padding(vertical = 4.dp).testTag("open-drawer")) {
-                Text("All apps")
+                Text(stringResource(R.string.all_apps))
             }
         } else {
             TextButton(onClick = onOpenDrawer, modifier = Modifier.testTag("open-drawer")) {
-                Text("All apps", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.all_apps), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }

@@ -1,5 +1,7 @@
 package io.github.medtahiri.launcher.home.glass
 
+import androidx.compose.ui.res.stringResource
+import io.github.medtahiri.launcher.R
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
@@ -76,11 +78,11 @@ fun GlassMenu(
         shortcuts.forEach { shortcut ->
             add(MenuAction(Shortcuts.label(shortcut), Color.White, { ArrowGlyph(it) }) { Shortcuts.start(context, shortcut) })
         }
-        add(MenuAction("Edit home screen", Color.White, { GridGlyph(color = it) }) { onEditHomeScreen() })
-        add(MenuAction(if (inDock) "Remove from dock" else "Add to dock", Color.White, { DockGlyph(color = it) }) { onToggleDock(app) })
-        add(MenuAction("App info", Color.White, { InfoGlyph(color = it) }) { openAppInfo(context, app) })
+        add(MenuAction(stringResource(R.string.edit_home_screen), Color.White, { GridGlyph(color = it) }) { onEditHomeScreen() })
+        add(MenuAction(stringResource(if (inDock) R.string.remove_from_dock else R.string.add_to_dock), Color.White, { DockGlyph(color = it) }) { onToggleDock(app) })
+        add(MenuAction(stringResource(R.string.app_info), Color.White, { InfoGlyph(color = it) }) { openAppInfo(context, app) })
         if (allowUninstall && !app.isSystem) {
-            add(MenuAction("Uninstall", GlassDanger, { MinusGlyph(color = it) }) { uninstallApp(context, app) })
+            add(MenuAction(stringResource(R.string.uninstall), GlassDanger, { MinusGlyph(color = it) }) { uninstallApp(context, app) })
         }
     }
 

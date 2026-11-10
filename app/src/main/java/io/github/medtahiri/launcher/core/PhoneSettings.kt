@@ -50,7 +50,7 @@ object PhoneSettings {
 
     /** The settings the Customize screen can change. */
     val CUSTOMIZABLE = listOf(
-        "home.style", "theme.mode", "theme.background", "theme.accent", "theme.font", "theme.textScale",
+        "language", "home.style", "theme.mode", "theme.background", "theme.accent", "theme.font", "theme.textScale",
         "home.columns", "home.iconSize", "home.showLabels", "home.favorites", "home.notificationDots",
     )
 

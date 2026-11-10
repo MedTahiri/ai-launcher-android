@@ -1,5 +1,7 @@
 package io.github.medtahiri.launcher.home
 
+import androidx.compose.ui.res.stringResource
+import io.github.medtahiri.launcher.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Column
@@ -48,7 +50,7 @@ fun AppDrawer(apps: List<AppEntry>, config: LauncherConfig, background: Color) {
             OutlinedTextField(
                 value = query,
                 onValueChange = { query = it },
-                placeholder = { Text("Search apps") },
+                placeholder = { Text(stringResource(R.string.search_apps)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp).testTag("drawer-search"),
             )
@@ -64,7 +66,7 @@ fun AppDrawer(apps: List<AppEntry>, config: LauncherConfig, background: Color) {
             onDone = { query = "" },
         )
         if (shown.isEmpty()) {
-            Text("No apps found", color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(16.dp))
+            Text(stringResource(R.string.no_apps_found), color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(16.dp))
         }
         LazyVerticalGrid(columns = GridCells.Fixed(config.drawer.columns), modifier = Modifier.fillMaxSize()) {
             items(shown, key = { it.key }) { app ->

@@ -1,5 +1,8 @@
 package io.github.medtahiri.launcher.home.glass
 
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import io.github.medtahiri.launcher.R
 import android.content.pm.ApplicationInfo
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -47,12 +50,12 @@ import io.github.medtahiri.launcher.theme.GlassSecondaryText
 import io.github.medtahiri.launcher.theme.glassSurface
 
 private val categories = listOf(
-    "Social" to setOf(ApplicationInfo.CATEGORY_SOCIAL),
-    "Entertainment" to setOf(ApplicationInfo.CATEGORY_VIDEO, ApplicationInfo.CATEGORY_AUDIO),
-    "Games" to setOf(ApplicationInfo.CATEGORY_GAME),
-    "Photo & video" to setOf(ApplicationInfo.CATEGORY_IMAGE),
-    "Productivity" to setOf(ApplicationInfo.CATEGORY_PRODUCTIVITY),
-    "News & maps" to setOf(ApplicationInfo.CATEGORY_NEWS, ApplicationInfo.CATEGORY_MAPS),
+    R.string.group_social to setOf(ApplicationInfo.CATEGORY_SOCIAL),
+    R.string.group_entertainment to setOf(ApplicationInfo.CATEGORY_VIDEO, ApplicationInfo.CATEGORY_AUDIO),
+    R.string.group_games to setOf(ApplicationInfo.CATEGORY_GAME),
+    R.string.group_photo to setOf(ApplicationInfo.CATEGORY_IMAGE),
+    R.string.group_productivity to setOf(ApplicationInfo.CATEGORY_PRODUCTIVITY),
+    R.string.group_news to setOf(ApplicationInfo.CATEGORY_NEWS, ApplicationInfo.CATEGORY_MAPS),
 )
 
 /** The last page: every app, sorted into groups by the category it reports. */
@@ -67,10 +70,11 @@ fun GlassLibraryPage(
     onOpenGroup: (String, List<AppEntry>) -> Unit,
 ) {
     // Keys are kept apart, since a folder can have the same name as a category.
-    val groups = remember(apps, suggestions, folders) {
-        val grouped = categories.map { (title, values) -> title to apps.filter { it.category in values } }
+    val res = LocalContext.current.resources
+    val groups = remember(apps, suggestions, folders, res) {
+        val grouped = categories.map { (title, values) -> res.getString(title) to apps.filter { it.category in values } }
         val placed = grouped.flatMap { it.second }.toSet()
-        val automatic = (listOf("Suggestions" to (suggestions + apps).distinct().take(4)) + grouped + ("Other" to apps.filter { it !in placed }))
+        val automatic = (listOf(res.getString(R.string.suggestions) to (suggestions + apps).distinct().take(4)) + grouped + (res.getString(R.string.group_other) to apps.filter { it !in placed }))
             .filter { it.second.isNotEmpty() }
         folders.map { Triple("folder:${it.name}", it.name, it.apps) } + automatic.map { Triple("group:${it.first}", it.first, it.second) }
     }
@@ -105,7 +109,7 @@ fun GlassLibraryPage(
             ) {
                 SearchGlyph(size = 15.dp, color = GlassSecondaryText)
                 Spacer(Modifier.width(8.dp))
-                Text("All apps", color = GlassSecondaryText, fontSize = 16.sp)
+                Text(stringResource(R.string.all_apps), color = GlassSecondaryText, fontSize = 16.sp)
             }
         }
         extra?.let { content -> item(span = { GridItemSpan(2) }) { content() } }

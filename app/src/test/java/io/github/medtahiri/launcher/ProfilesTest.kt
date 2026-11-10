@@ -64,3 +64,29 @@ class ProfilesTest {
         assertEquals("#0A1A3A", WallpaperAccent.hex(darkBlue))
     }
 }
+
+class LanguageTest {
+    private fun problems(text: String) =
+        io.github.medtahiri.launcher.core.parseConfig(text, WidgetRegistry.types, WidgetRegistry::validate).problems
+
+    @Test fun languageIsAutoOrALanguageTag() {
+        assertEquals(0, problems("""{"language":"auto"}""").size)
+        assertEquals(0, problems("""{"language":"ar"}""").size)
+        assertEquals(0, problems("""{"language":"fr-MA"}""").size)
+        assertEquals(1, problems("""{"language":"Arabic"}""").size)
+    }
+
+    @Test fun aProfileCantChangeTheLanguage() {
+        assertEquals(1, problems("""{"profiles":[{"name":"Home","set":{"language":"ar"}}]}""").size)
+    }
+
+    @Test fun everyLanguageHasEveryString() {
+        val res = java.io.File(System.getProperty("launcher.config")!!).parentFile!!.resolve("app/src/main/res")
+        fun names(folder: String) = Regex("""<(string|plurals) name="([^"]+)"""")
+            .findAll(res.resolve("$folder/strings.xml").readText()).map { it.groupValues[2] }.toSet()
+        val english = names("values").filterNot { it.startsWith("words_") }.toSet()
+        for (folder in res.list()!!.filter { it.startsWith("values-") && res.resolve("$it/strings.xml").exists() }) {
+            assertEquals("missing in $folder", emptySet<String>(), english - names(folder))
+        }
+    }
+}

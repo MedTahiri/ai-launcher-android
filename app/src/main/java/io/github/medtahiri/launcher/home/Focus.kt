@@ -1,5 +1,8 @@
 package io.github.medtahiri.launcher.home
 
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import io.github.medtahiri.launcher.R
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -48,16 +51,16 @@ val LocalFocusNote = staticCompositionLocalOf<FocusNote?> { null }
 fun HiddenAppsNote(color: Color, modifier: Modifier = Modifier) {
     val note = LocalFocusNote.current ?: return
     if (note.hiddenCount == 0) return
-    val apps = if (note.hiddenCount == 1) "1 app" else "${note.hiddenCount} apps"
     Row(modifier.fillMaxWidth().testTag("focus-hidden-note"), verticalAlignment = Alignment.CenterVertically) {
         Text(
-            "$apps hidden for focus" + (note.until?.let { " until $it" } ?: ""),
+            note.until?.let { pluralStringResource(R.plurals.focus_hidden_until, note.hiddenCount, note.hiddenCount, it) }
+                ?: pluralStringResource(R.plurals.focus_hidden, note.hiddenCount, note.hiddenCount),
             color = color,
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.weight(1f),
         )
         note.onShowAnyway?.let { show ->
-            TextButton(onClick = show, modifier = Modifier.testTag("focus-show-anyway")) { Text("Show", color = color) }
+            TextButton(onClick = show, modifier = Modifier.testTag("focus-show-anyway")) { Text(stringResource(R.string.show), color = color) }
         }
     }
 }
@@ -88,21 +91,21 @@ fun FocusPause(app: AppEntry, seconds: Int, onOpen: () -> Unit, onCancel: () -> 
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Box(Modifier.size(72.dp)) { icon?.let { Image(it, contentDescription = null, modifier = Modifier.size(72.dp)) } }
-            Text("Take a breath.", color = Color.White, style = MaterialTheme.typography.headlineMedium)
+            Text(stringResource(R.string.take_a_breath), color = Color.White, style = MaterialTheme.typography.headlineMedium)
             Text(
-                if (left > 0) "Do you really want to open ${app.label}? You can in $left…" else "Still want to open ${app.label}?",
+                if (left > 0) stringResource(R.string.pause_countdown, app.label, left) else stringResource(R.string.pause_ready, app.label),
                 color = Color.White.copy(alpha = 0.75f),
                 textAlign = TextAlign.Center,
                 style = MaterialTheme.typography.bodyLarge,
             )
             Spacer(Modifier.height(8.dp))
-            Button(onClick = onCancel, modifier = Modifier.fillMaxWidth().testTag("focus-not-now")) { Text("Not now") }
+            Button(onClick = onCancel, modifier = Modifier.fillMaxWidth().testTag("focus-not-now")) { Text(stringResource(R.string.not_now)) }
             OutlinedButton(
                 onClick = onOpen,
                 enabled = left == 0,
                 modifier = Modifier.fillMaxWidth().testTag("focus-open-anyway"),
             ) {
-                Text("Open ${app.label}", color = if (left == 0) Color.White else Color.White.copy(alpha = 0.4f))
+                Text(stringResource(R.string.open_app, app.label), color = if (left == 0) Color.White else Color.White.copy(alpha = 0.4f))
             }
         }
     }

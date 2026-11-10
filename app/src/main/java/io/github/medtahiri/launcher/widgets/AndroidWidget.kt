@@ -1,5 +1,7 @@
 package io.github.medtahiri.launcher.widgets
 
+import androidx.compose.ui.res.stringResource
+import io.github.medtahiri.launcher.R
 import android.app.Activity
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProviderInfo
@@ -176,8 +178,8 @@ private fun AppWidgetSlot(config: WidgetConfig, slot: String, fillsArea: Boolean
                     },
                 )
                 DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                    DropdownMenuItem(text = { Text("Change widget") }, onClick = { menuOpen = false; choose() })
-                    DropdownMenuItem(text = { Text("Remove widget") }, onClick = { menuOpen = false; AppWidgets.clear(context, slot) })
+                    DropdownMenuItem(text = { Text(stringResource(R.string.change_widget)) }, onClick = { menuOpen = false; choose() })
+                    DropdownMenuItem(text = { Text(stringResource(R.string.remove_widget)) }, onClick = { menuOpen = false; AppWidgets.clear(context, slot) })
                 }
             }
         }
@@ -194,10 +196,10 @@ private fun Placeholder(spec: String, modifier: Modifier, onClick: () -> Unit) {
     val label = remember(spec) {
         val matching = if (spec.isEmpty()) emptyList() else AppWidgets.matching(context, spec)
         when {
-            spec.isEmpty() -> "Add a widget"
-            matching.isEmpty() -> "${AppWidgets.appLabel(context, spec.substringBefore('/'))} has no widget here. Tap to choose one."
-            matching.size == 1 -> "Add ${matching[0].loadLabel(context.packageManager)}"
-            else -> "Add a ${AppWidgets.appLabel(context, spec)} widget"
+            spec.isEmpty() -> context.getString(R.string.add_a_widget)
+            matching.isEmpty() -> context.getString(R.string.widget_none_here, AppWidgets.appLabel(context, spec.substringBefore('/')))
+            matching.size == 1 -> context.getString(R.string.add_named, matching[0].loadLabel(context.packageManager))
+            else -> context.getString(R.string.add_app_widget, AppWidgets.appLabel(context, spec))
         }
     }
     val shape = RoundedCornerShape(24.dp)
@@ -222,11 +224,11 @@ private fun WidgetPicker(options: List<AppWidgetProviderInfo>, onDismiss: () -> 
         Surface(Modifier.fillMaxSize().semantics { testTagsAsResourceId = true }, color = MaterialTheme.colorScheme.background) {
             Column(Modifier.statusBarsPadding().navigationBarsPadding().testTag("widget-picker")) {
                 Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text("Choose a widget", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
-                    TextButton(onClick = onDismiss) { Text("Cancel") }
+                    Text(stringResource(R.string.choose_widget), style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
+                    TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
                 }
                 if (options.isEmpty()) {
-                    Text("No app on this phone offers a widget.", modifier = Modifier.padding(16.dp))
+                    Text(stringResource(R.string.no_widgets), modifier = Modifier.padding(16.dp))
                 }
                 val grouped = remember(options) { options.groupBy { it.provider.packageName }.toList() }
                 LazyColumn(Modifier.fillMaxWidth()) {
@@ -273,7 +275,7 @@ private fun WidgetChoice(info: AppWidgetProviderInfo, onClick: () -> Unit) {
     Row(
         Modifier
             .fillMaxWidth()
-            .clickable(onClickLabel = "Add $label", onClick = onClick)
+            .clickable(onClickLabel = stringResource(R.string.add_named, label), onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(16.dp),
@@ -281,7 +283,7 @@ private fun WidgetChoice(info: AppWidgetProviderInfo, onClick: () -> Unit) {
         Box(Modifier.size(120.dp).clipToBounds(), contentAlignment = Alignment.Center) {
             if (layoutPreview != null) {
                 LayoutPreview(info, layoutPreview, 120.dp)
-                Box(Modifier.matchParentSize().clickable(onClickLabel = "Add $label", onClick = onClick)) // its own buttons stay inert
+                Box(Modifier.matchParentSize().clickable(onClickLabel = stringResource(R.string.add_named, label), onClick = onClick)) // its own buttons stay inert
             } else {
                 preview?.let { Image(it, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Fit) }
             }

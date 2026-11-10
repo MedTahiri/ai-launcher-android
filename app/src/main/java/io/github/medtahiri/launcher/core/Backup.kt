@@ -1,5 +1,6 @@
 package io.github.medtahiri.launcher.core
 
+import io.github.medtahiri.launcher.R
 import android.content.Context
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -32,10 +33,10 @@ object Backup {
         },
     )
 
-    /** Restores a backup. Returns why it can't, or null when done. */
-    fun import(context: Context, text: String): String? {
-        val backup = runCatching { Json.parseToJsonElement(text).jsonObject }.getOrNull() ?: return "That file isn't a backup"
-        if (backup["format"]?.jsonPrimitive?.content != FORMAT) return "That file isn't a launcher backup"
+    /** Restores a backup. Returns why it can't, as a string resource, or null when done. */
+    fun import(context: Context, text: String): Int? {
+        val backup = runCatching { Json.parseToJsonElement(text).jsonObject }.getOrNull() ?: return R.string.backup_not_backup
+        if (backup["format"]?.jsonPrimitive?.content != FORMAT) return R.string.backup_not_backup
         (backup["phoneSettings"] as? JsonObject)?.let { PhoneSettings.save(context, it) }
         backup["profile"]?.jsonPrimitive?.content?.let { PickedProfile.set(context, it) }
         (backup["glass"] as? JsonObject)?.let { glass ->

@@ -14,6 +14,10 @@ used a terminal, so explain each step simply and don't assume they know Android 
 5. **Verify:** run `tools/verify.sh` (add `-s DEVICE` if it asks). It runs the unit tests, builds, installs and opens the
    launcher, opens the drawer, and checks for crashes and that the widgets in `launcher.json` are on screen. The header of that script lists
    exactly what it does on the device.
+   - **Settings only?** Once `verify.sh` has installed this build, `tools/push-config.sh [-s DEVICE]` sends `launcher.json`
+     and applies it in about a second, with no build, and saves `.verify/live.png`. Use it to try looks quickly. It
+     can't apply code changes, or a new `name`, and it rejects a widget or setting this build doesn't know. Run
+     `verify.sh` once more at the end: that's what counts.
 6. **Look at the screenshots:** open `.verify/home.png` and `.verify/drawer.png` yourself. `verify.sh` can't see colors,
    overlaps, cut-off text or ugly layouts, and it doesn't press your new features. Check that each thing the person
    asked for is visibly there, and try anything interactive. Test tags are in the UI dump: `adb -s DEVICE exec-out uiautomator dump /dev/tty`
@@ -66,6 +70,7 @@ Unknown settings and invalid values, including widget options, fail `./build.sh`
 | Setting | Values | Default |
 |---|---|---|
 | `name` | The name on the phone | `My Launcher` |
+| `language` | The launcher's own language: `auto` (the phone's), or `en`, `fr`, `ar` or another one you add (see "Languages") | `auto` |
 | `theme.mode` | `dark`, `light`, `auto` | `dark` |
 | `theme.background` | `#RRGGBB`, `wallpaper`, `auto` | `#000000` |
 | `theme.accent` | `#RRGGBB`, or `wallpaper` for a color from the wallpaper, made readable on the background | `#FFFFFF` |
@@ -162,7 +167,7 @@ A profile changes some settings during set hours, or when the person picks it in
 ]
 ```
 
-- `set` uses the paths of this table. A profile can't change `name` or `profiles`.
+- `set` uses the paths of this table. A profile can't change `name`, `language` or `profiles`.
 - Hours and days work as in focus rules. Without `from` and `to`, it's only used when picked.
 - The first profile whose hours match is used. One picked in Customize stays until "Automatic" is picked.
 - `./build.sh` checks each profile's settings too.
@@ -208,10 +213,19 @@ all of it to anyone but the person. Package names differ between phone brands, s
 Favorites and app rules contain package names that reveal what someone has installed. Point that out before they publish
 a fork.
 
-The launcher's own text is English, in `home/`, `widgets/` and `core/SafeModeActivity.kt`, while the date follows the
-phone's language (`adb shell settings get system system_locales`). If the launcher is for someone reading another
-language, translate the text they'll see. If you can't tell who it's for, keep English and offer to translate. Translating safe mode's
-text is a fine reason to edit `core/`; leave its layout alone.
+### Languages
+
+The launcher's own text is in English, French and Arabic, in `app/src/main/res/values/strings.xml`, `values-fr/` and
+`values-ar/`. It follows the phone's language (`adb shell settings get system system_locales`), or `language` in
+`launcher.json`, which the person can also change in Customize. Arabic is laid out right to left. Dates follow the same
+language.
+
+- **Someone reading another language:** add `res/values-XX/strings.xml` (XX like `es` or `tr`), translating every
+  string and plural in `values/strings.xml`, keeping the names and the `%1$s` placeholders. Set `"language": "XX"` if their
+  phone is in a different language. Check `.verify/home.png`: long words can be cut off.
+- **New text in code:** put it in all three `strings.xml` files, and use `stringResource(R.string.…)` in Compose or
+  `context.getString(…)` elsewhere. Text only agents read, such as `launcher.json` problems, stays in English.
+- The French and Arabic were written by an AI and checked only on screen: corrections from native speakers are welcome.
 
 Long press on an app also lists its own shortcuts (tag `shortcut`), like search does; Android only shares them with the
 default home screen. Private apps open from `private-apps`. The Customize screen also has the profile picker and Back up

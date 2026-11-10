@@ -1,5 +1,7 @@
 package io.github.medtahiri.launcher.home
 
+import androidx.compose.ui.res.stringResource
+import io.github.medtahiri.launcher.R
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -45,7 +47,7 @@ fun FolderIcon(folder: Folder, config: LauncherConfig, modifier: Modifier = Modi
     val iconSize = config.home.iconSize
     Column(
         modifier
-            .clickable(onClickLabel = "Open folder ${folder.name}") { open = true }
+            .clickable(onClickLabel = stringResource(R.string.open_folder, folder.name)) { open = true }
             .padding(vertical = 8.dp, horizontal = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(6.dp),

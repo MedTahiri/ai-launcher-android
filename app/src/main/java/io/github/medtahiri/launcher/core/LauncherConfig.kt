@@ -13,6 +13,8 @@ import kotlinx.serialization.json.intOrNull
 @Serializable
 data class LauncherConfig(
     val name: String = "My Launcher",
+    /** The launcher's own language: "auto" follows the phone, or a language like "ar", "fr" or "en". */
+    val language: String = "auto",
     val theme: ThemeConfig = ThemeConfig(),
     val home: HomeConfig = HomeConfig(),
     val drawer: DrawerConfig = DrawerConfig(),
@@ -135,6 +137,7 @@ data class ParsedConfig(val config: LauncherConfig, val problems: List<String>)
 val GESTURE_ACTIONS = listOf("none", "drawer", "search", "customize", "notifications", "quick_settings", "lock")
 
 private val json = Json { ignoreUnknownKeys = false } // a misspelled setting is a mistake, not something to skip
+private val LANGUAGE = Regex("[a-z]{2,3}(-[A-Z]{2})?")
 private val HEX_COLOR = Regex("#[0-9a-fA-F]{6}")
 private val PACKAGE_NAME = Regex("[a-zA-Z_][a-zA-Z0-9_]*(\\.[a-zA-Z_][a-zA-Z0-9_]*)+")
 
@@ -170,6 +173,7 @@ private fun validate(
     validateWidget: (WidgetConfig) -> List<String>,
 ): List<String> = buildList {
     if (c.name.isBlank()) add("name can't be empty")
+    if (c.language != "auto" && !LANGUAGE.matches(c.language)) add("language must be auto or a language like ar, fr or en, not \"${c.language}\"")
     if (c.theme.mode !in setOf("dark", "light", "auto")) add("theme.mode must be dark, light or auto, not \"${c.theme.mode}\"")
     if (c.theme.background !in setOf("wallpaper", "auto") && !HEX_COLOR.matches(c.theme.background)) {
         add("theme.background must be #RRGGBB, wallpaper or auto, not \"${c.theme.background}\"")
