@@ -22,8 +22,8 @@ data class ProfileConfig(
 )
 
 object Profiles {
-    /** Settings a profile can't change: it can't rename the launcher, or contain profiles of its own. */
-    private val FIXED = setOf("name", "profiles")
+    /** Settings a profile can't change: the name, the language (read before the profile is), and profiles of its own. */
+    private val FIXED = setOf("name", "profiles", "language")
 
     /** The profile in use: the one picked on the phone if any ("" means automatic), else the first whose hours match. */
     fun active(profiles: List<ProfileConfig>, picked: String, at: LocalDateTime): ProfileConfig? {

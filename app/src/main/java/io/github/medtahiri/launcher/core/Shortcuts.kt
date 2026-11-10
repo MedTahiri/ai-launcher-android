@@ -1,5 +1,6 @@
 package io.github.medtahiri.launcher.core
 
+import io.github.medtahiri.launcher.R
 import android.content.Context
 import android.content.pm.LauncherApps
 import android.content.pm.ShortcutInfo
@@ -41,7 +42,7 @@ object Shortcuts {
 
     fun start(context: Context, shortcut: ShortcutInfo) {
         runCatching { context.getSystemService(LauncherApps::class.java).startShortcut(shortcut, null, null) }
-            .onFailure { Toast.makeText(context, "Couldn't open that", Toast.LENGTH_SHORT).show() }
+            .onFailure { Toast.makeText(context, R.string.could_not_open, Toast.LENGTH_SHORT).show() }
     }
 
     fun icon(context: Context, shortcut: ShortcutInfo, sizePx: Int): ImageBitmap? = runCatching {

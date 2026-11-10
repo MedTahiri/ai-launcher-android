@@ -1,5 +1,6 @@
 package io.github.medtahiri.launcher.core
 
+import io.github.medtahiri.launcher.R
 import android.app.Activity
 import android.content.Intent
 import android.content.pm.LauncherApps
@@ -24,20 +25,20 @@ class SafeModeActivity : Activity() {
             setPadding(padding, padding, padding, padding)
         }
         list.addView(TextView(this).apply {
-            text = "Safe mode"
+            text = getString(R.string.safe_mode_title)
             textSize = 28f
             tag = "safe-mode"
         })
         list.addView(TextView(this).apply {
-            text = "The home screen stopped working several times, so this simple one opened instead. You can still open your apps below, or choose another home screen in settings."
+            text = getString(R.string.safe_mode_text)
             setPadding(0, padding / 2, 0, padding)
         })
-        list.addView(button("Try the launcher again") {
+        list.addView(button(getString(R.string.safe_mode_try_again)) {
             CrashGuard.clear(this)
             startActivity(Intent(this, HomeActivity::class.java))
             finish()
         })
-        list.addView(button("Open launcher settings") { startActivity(Intent(Settings.ACTION_HOME_SETTINGS)) })
+        list.addView(button(getString(R.string.safe_mode_settings)) { startActivity(Intent(Settings.ACTION_HOME_SETTINGS)) })
 
         val launcherApps = getSystemService(LauncherApps::class.java)
         launcherApps.profiles

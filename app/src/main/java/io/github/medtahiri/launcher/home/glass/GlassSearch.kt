@@ -1,5 +1,7 @@
 package io.github.medtahiri.launcher.home.glass
 
+import androidx.compose.ui.res.stringResource
+import io.github.medtahiri.launcher.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -120,7 +122,7 @@ fun GlassSearch(
                         SearchGlyph(size = 16.dp, color = GlassSecondaryText)
                         Spacer(Modifier.width(8.dp))
                         Box(Modifier.weight(1f)) {
-                            if (query.isEmpty()) Text("Search apps", color = GlassSecondaryText, fontSize = 17.sp)
+                            if (query.isEmpty()) Text(stringResource(R.string.search_apps), color = GlassSecondaryText, fontSize = 17.sp)
                             inner()
                         }
                         if (query.isNotEmpty()) {
@@ -130,14 +132,14 @@ fun GlassSearch(
                                     .size(20.dp)
                                     .clip(RoundedCornerShape(10.dp))
                                     .background(GlassSecondaryText)
-                                    .clickable(onClickLabel = "Clear") { query = "" },
+                                    .clickable(onClickLabel = stringResource(R.string.clear)) { query = "" },
                             ) { CloseGlyph(size = 8.dp, color = Color.Black) }
                         }
                     }
                 },
             )
             Text(
-                "Cancel",
+                stringResource(R.string.cancel),
                 color = Color.White,
                 fontSize = 17.sp,
                 modifier = Modifier.padding(start = 12.dp).clickable(onClick = close),
@@ -145,7 +147,7 @@ fun GlassSearch(
         }
 
         if (query.isBlank()) {
-            SectionTitle("Suggestions")
+            SectionTitle(stringResource(R.string.suggestions))
             Column(
                 Modifier
                     .fillMaxWidth()
@@ -175,9 +177,9 @@ fun GlassSearch(
             )
         }
         HiddenAppsNote(GlassSecondaryText, Modifier.padding(top = 8.dp))
-        SectionTitle(if (query.isBlank()) "All apps" else "Apps")
+        SectionTitle(stringResource(if (query.isBlank()) R.string.all_apps else R.string.apps))
         if (results.isEmpty()) {
-            Text("No results", color = GlassSecondaryText, fontSize = 17.sp, modifier = Modifier.padding(top = 24.dp).align(Alignment.CenterHorizontally))
+            Text(stringResource(R.string.no_results), color = GlassSecondaryText, fontSize = 17.sp, modifier = Modifier.padding(top = 24.dp).align(Alignment.CenterHorizontally))
         } else {
             LazyColumn(Modifier.fillMaxWidth().weight(1f, fill = false).padding(bottom = 12.dp).clip(CardShape).background(GlassMenu)) {
                 itemsIndexed(results, key = { _, app -> app.key }) { index, app ->

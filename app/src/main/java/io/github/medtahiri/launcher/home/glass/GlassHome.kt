@@ -1,5 +1,11 @@
 package io.github.medtahiri.launcher.home.glass
 
+import androidx.compose.ui.AbsoluteAlignment
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.foundation.layout.absoluteOffset
+import androidx.compose.ui.res.stringResource
+import io.github.medtahiri.launcher.R
 import android.content.Context
 import android.content.Intent
 import android.provider.Settings
@@ -160,7 +166,7 @@ fun GlassHome(
     val toggleDock: (AppEntry) -> Unit = { app ->
         when {
             app.packageName in dock -> dock = dock - app.packageName
-            dock.size >= MAX_DOCK -> Toast.makeText(context, "The dock is full", Toast.LENGTH_SHORT).show()
+            dock.size >= MAX_DOCK -> Toast.makeText(context, R.string.dock_full, Toast.LENGTH_SHORT).show()
             else -> dock = dock + app.packageName
         }
         store.saveDock(dock)
@@ -337,8 +343,12 @@ private fun GlassPage(
             var draggedKey by remember { mutableStateOf<String?>(null) }
             var draggedAt by remember { mutableStateOf(Offset.Zero) }
 
+            // Icons are placed and dragged in absolute positions, from the left; right-to-left languages fill rows from
+            // the right, so the column is mirrored here rather than by the layout, which would turn drags around.
+            val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+            fun column(index: Int) = (index % columns).let { if (rtl) columns - 1 - it else it }
             fun slotPosition(index: Int) = Offset(
-                (index % columns) * cellWidthPx,
+                column(index) * cellWidthPx,
                 topPx + (index / columns) * cellHeightPx,
             )
 
@@ -367,7 +377,8 @@ private fun GlassPage(
                     Box(
                         contentAlignment = Alignment.Center,
                         modifier = Modifier
-                            .offset { if (isDragged) draggedAt.round() else placed }
+                            .align(AbsoluteAlignment.TopLeft) // from the left in every language: see column()
+                            .absoluteOffset { if (isDragged) draggedAt.round() else placed }
                             .size(cellWidth, cellHeight)
                             .zIndex(if (isDragged) 1f else 0f)
                             .testTag("glass-app-${app.packageName}")
@@ -382,8 +393,9 @@ private fun GlassPage(
                                     onDrag = { change, amount ->
                                         change.consume()
                                         draggedAt += amount
+                                        val centerX = draggedAt.x + cellWidthPx / 2
                                         val slot = GlassLayout.slotAt(
-                                            draggedAt.x + cellWidthPx / 2,
+                                            if (rtl) columns * cellWidthPx - centerX else centerX,
                                             draggedAt.y + cellHeightPx / 2 - topPx,
                                             cellWidthPx,
                                             cellHeightPx,
@@ -395,9 +407,12 @@ private fun GlassPage(
                                     onDragEnd = {
                                         val centerX = draggedAt.x + cellWidthPx / 2
                                         val edge = cellWidthPx * 0.35f
+                                        // Pages turn the other way in right-to-left languages: the next one is on the left.
+                                        val towardStart = if (rtl) centerX > widthPx - edge else centerX < edge
+                                        val towardEnd = if (rtl) centerX < edge else centerX > widthPx - edge
                                         when {
-                                            centerX < edge && previousExists -> moveToPage(itemKey, -1)
-                                            centerX > widthPx - edge && nextExists -> moveToPage(itemKey, 1)
+                                            towardStart && previousExists -> moveToPage(itemKey, -1)
+                                            towardEnd && nextExists -> moveToPage(itemKey, 1)
                                             else -> drop()
                                         }
                                         draggedKey = null
@@ -453,7 +468,7 @@ private fun PageIndicator(pager: PagerState, onSearch: () -> Unit) {
                 ) {
                     SearchGlyph(size = 12.dp)
                     Spacer(Modifier.width(6.dp))
-                    Text("Search", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                    Text(stringResource(R.string.search), color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium)
                 }
             }
         }
@@ -473,7 +488,7 @@ private fun Dock(apps: List<AppEntry>, callbacks: IconCallbacks) {
             .glassSurface(RoundedCornerShape(34.dp)),
     ) {
         if (apps.isEmpty()) {
-            Text("Long-press an app to add it here", color = Color.White.copy(alpha = 0.75f), fontSize = 13.sp)
+            Text(stringResource(R.string.dock_empty), color = Color.White.copy(alpha = 0.75f), fontSize = 13.sp)
         }
         apps.forEach { app ->
             GlassIcon(app, callbacks, showLabel = false, modifier = Modifier.testTag("favorite-${app.packageName}"))
@@ -490,11 +505,11 @@ private fun EditBar(visible: Boolean, onDone: () -> Unit) {
     Box(Modifier.fillMaxWidth().height(44.dp).padding(horizontal = 16.dp)) {
         if (!visible) return@Box
         Box(Modifier.align(Alignment.CenterStart)) {
-            GlassPill("Edit") { menuOpen = true }
+            GlassPill(stringResource(R.string.edit)) { menuOpen = true }
             DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                 LocalOpenCustomize.current?.let { openCustomize ->
                     DropdownMenuItem(
-                        text = { Text("Customize") },
+                        text = { Text(stringResource(R.string.customize)) },
                         modifier = Modifier.testTag("open-customize"),
                         onClick = {
                             menuOpen = false
@@ -503,21 +518,21 @@ private fun EditBar(visible: Boolean, onDone: () -> Unit) {
                     )
                 }
                 DropdownMenuItem(
-                    text = { Text("Wallpaper") },
+                    text = { Text(stringResource(R.string.wallpaper)) },
                     onClick = {
                         menuOpen = false
                         openSystemScreen(context, Intent.createChooser(Intent(Intent.ACTION_SET_WALLPAPER), null))
                     },
                 )
                 DropdownMenuItem(
-                    text = { Text("Change home app") },
+                    text = { Text(stringResource(R.string.change_home_app)) },
                     onClick = {
                         menuOpen = false
                         openSystemScreen(context, Intent(Settings.ACTION_HOME_SETTINGS))
                     },
                 )
                 DropdownMenuItem(
-                    text = { Text("Android settings") },
+                    text = { Text(stringResource(R.string.android_settings)) },
                     onClick = {
                         menuOpen = false
                         openSystemScreen(context, Intent(Settings.ACTION_SETTINGS))
@@ -525,13 +540,13 @@ private fun EditBar(visible: Boolean, onDone: () -> Unit) {
                 )
             }
         }
-        Box(Modifier.align(Alignment.CenterEnd)) { GlassPill("Done", onDone) }
+        Box(Modifier.align(Alignment.CenterEnd)) { GlassPill(stringResource(R.string.done), onDone) }
     }
 }
 
 private fun openSystemScreen(context: Context, intent: Intent) {
     runCatching { context.startActivity(intent) }
-        .onFailure { Toast.makeText(context, "Not available on this phone", Toast.LENGTH_SHORT).show() }
+        .onFailure { Toast.makeText(context, R.string.not_available, Toast.LENGTH_SHORT).show() }
 }
 
 @Composable

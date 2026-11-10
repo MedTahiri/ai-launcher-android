@@ -42,6 +42,7 @@ object Speech {
     }
 
     private fun speak(text: String) {
+        tts?.language = java.util.Locale.getDefault() // the launcher's language, so "Opening" is said in it
         tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "launcher")
     }
 }

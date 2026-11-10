@@ -1,5 +1,6 @@
 package io.github.medtahiri.launcher.core
 
+import android.content.Context
 import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
@@ -45,6 +46,11 @@ class HomeActivity : ComponentActivity() {
     private var packagedText = ""
     private var wallpaperListener: Any? = null
 
+    /** In the launcher's own language, which can differ from the phone's (launcher.json `language`). */
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(Language.wrap(newBase))
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         CrashGuard.install(this)
         // Always starts fresh: a home screen opens on its first page, and what must last is in preferences.
@@ -59,8 +65,9 @@ class HomeActivity : ComponentActivity() {
         val debuggable = applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0
         check(!(debuggable && intent.getBooleanExtra("crash_test", false))) { "crash_test" }
 
-        packagedText = assets.open("launcher.json").bufferedReader().use { it.readText() }
+        packagedText = LiveConfig.read(this) ?: assets.open("launcher.json").bufferedReader().use { it.readText() }
         val (loaded, hasPhoneChanges) = loadConfig()
+        LiveConfig.reportStatus(this, loaded.problems)
         val (parsedWithProfile, activeProfile) = withProfile(loaded)
         val systemDark = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES
         val dark = when (parsedWithProfile.config.theme.mode) {

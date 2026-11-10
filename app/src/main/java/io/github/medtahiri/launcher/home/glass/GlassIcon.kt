@@ -1,5 +1,7 @@
 package io.github.medtahiri.launcher.home.glass
 
+import androidx.compose.ui.res.stringResource
+import io.github.medtahiri.launcher.R
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -119,7 +121,7 @@ fun GlassIcon(
             .combinedClickable(
                 interactionSource = interaction,
                 indication = null,
-                onClickLabel = "Open ${app.label}",
+                onClickLabel = stringResource(R.string.open_app, app.label),
                 onClick = {
                     if (!callbacks.wiggling) {
                         openApp(context, app)
@@ -154,7 +156,7 @@ fun GlassIcon(
                         .size(22.dp)
                         .clip(CircleShape)
                         .background(Color(0xE6545458))
-                        .clickable(onClickLabel = "Uninstall ${app.label}") { callbacks.onRemove(app) },
+                        .clickable(onClickLabel = stringResource(R.string.uninstall_app, app.label)) { callbacks.onRemove(app) },
                 ) {
                     Box(Modifier.size(width = 10.dp, height = 2.dp).background(Color.White))
                 }

@@ -1,5 +1,6 @@
 package io.github.medtahiri.launcher.widgets
 
+import io.github.medtahiri.launcher.R
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -32,7 +33,7 @@ object BatteryWidget : LauncherWidget {
                     val scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, 100)
                     val status = intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1)
                     val charging = status == BatteryManager.BATTERY_STATUS_CHARGING || status == BatteryManager.BATTERY_STATUS_FULL
-                    label = if (level < 0) "" else "${level * 100 / scale}%" + if (charging) " · charging" else ""
+                    label = if (level < 0) "" else context.getString(if (charging) R.string.battery_charging else R.string.battery_level, level * 100 / scale)
                 }
             }
             ContextCompat.registerReceiver(context, receiver, IntentFilter(Intent.ACTION_BATTERY_CHANGED), ContextCompat.RECEIVER_NOT_EXPORTED)

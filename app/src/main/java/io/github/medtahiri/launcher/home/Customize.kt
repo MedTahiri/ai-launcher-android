@@ -1,5 +1,7 @@
 package io.github.medtahiri.launcher.home
 
+import androidx.compose.ui.res.stringResource
+import io.github.medtahiri.launcher.R
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -127,9 +129,9 @@ private fun CustomizeForm(
     val home = draft.home
     Column(Modifier.statusBarsPadding().navigationBarsPadding().testTag("customize")) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-            TextButton(onClick = onCancel) { Text("Cancel") }
-            Text("Customize", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f).padding(start = 8.dp))
-            TextButton(onClick = onSave, modifier = Modifier.testTag("customize-save")) { Text("Save") }
+            TextButton(onClick = onCancel) { Text(stringResource(R.string.cancel)) }
+            Text(stringResource(R.string.customize), style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f).padding(start = 8.dp))
+            TextButton(onClick = onSave, modifier = Modifier.testTag("customize-save")) { Text(stringResource(R.string.save)) }
         }
         HorizontalDivider()
         Column(
@@ -137,44 +139,61 @@ private fun CustomizeForm(
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
             Text(
-                "Changes stay on this phone. If launcher.json later changes the same setting, its new value wins.",
+                stringResource(R.string.customize_note),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             if (draft.profiles.isNotEmpty()) {
-                Setting("Profile") {
-                    Choices(listOf("" to "Automatic") + draft.profiles.map { it.name to it.name }, profile, onProfile)
+                Setting(stringResource(R.string.profile)) {
+                    Choices(listOf("" to stringResource(R.string.automatic)) + draft.profiles.map { it.name to it.name }, profile, onProfile)
                     controls.activeProfile?.let {
                         Text(
-                            "$it is in use now. It can change some of the settings below while it is.",
+                            stringResource(R.string.profile_in_use, it),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
             }
-            Setting("Style") {
-                Choices(listOf("simple" to "Simple", "glass" to "Glass"), home.style) { onChange(draft.copy(home = home.copy(style = it))) }
+            Setting(stringResource(R.string.language)) {
+                Choices(
+                    listOf("auto" to stringResource(R.string.language_auto), "en" to "English", "fr" to "Français", "ar" to "العربية"),
+                    draft.language,
+                ) { onChange(draft.copy(language = it)) }
             }
-            Setting("Mode") {
-                Choices(listOf("dark" to "Dark", "light" to "Light", "auto" to "Follow phone"), theme.mode) {
+            Setting(stringResource(R.string.style)) {
+                Choices(listOf("simple" to stringResource(R.string.style_simple), "glass" to stringResource(R.string.style_glass)), home.style) { onChange(draft.copy(home = home.copy(style = it))) }
+            }
+            Setting(stringResource(R.string.mode)) {
+                Choices(
+                    listOf(
+                        "dark" to stringResource(R.string.mode_dark),
+                        "light" to stringResource(R.string.mode_light),
+                        "auto" to stringResource(R.string.mode_auto),
+                    ), theme.mode) {
                     onChange(draft.copy(theme = theme.copy(mode = it)))
                 }
             }
-            Setting("Background") {
+            Setting(stringResource(R.string.background)) {
                 Swatches((BACKGROUNDS + theme.background).distinct().filter { it != "auto" }, theme.background) {
                     onChange(draft.copy(theme = theme.copy(background = it)))
                 }
             }
-            Setting("Accent") {
+            Setting(stringResource(R.string.accent)) {
                 Swatches((ACCENTS + theme.accent).distinct(), theme.accent) { onChange(draft.copy(theme = theme.copy(accent = it))) }
             }
-            Setting("Font") {
-                Choices(listOf("default" to "Default", "sans" to "Sans", "serif" to "Serif", "mono" to "Mono"), theme.font) {
+            Setting(stringResource(R.string.font)) {
+                Choices(
+                    listOf(
+                        "default" to stringResource(R.string.font_default),
+                        "sans" to stringResource(R.string.font_sans),
+                        "serif" to stringResource(R.string.font_serif),
+                        "mono" to stringResource(R.string.font_mono),
+                    ), theme.font) {
                     onChange(draft.copy(theme = theme.copy(font = it)))
                 }
             }
-            Setting("Text size: ${"%.1f".format(theme.textScale)}×") {
+            Setting(stringResource(R.string.text_size, "%.1f".format(theme.textScale))) {
                 Slider(
                     value = theme.textScale,
                     onValueChange = { onChange(draft.copy(theme = theme.copy(textScale = (it * 10).roundToInt() / 10f))) },
@@ -182,35 +201,34 @@ private fun CustomizeForm(
                     steps = 11,
                 )
             }
-            Setting("Icon size: ${home.iconSize}") {
+            Setting(stringResource(R.string.icon_size, home.iconSize)) {
                 Slider(
                     value = home.iconSize.toFloat(),
                     onValueChange = { onChange(draft.copy(home = home.copy(iconSize = (it / 4).roundToInt() * 4))) },
                     valueRange = 40f..120f,
                 )
             }
-            Setting("Columns") {
+            Setting(stringResource(R.string.columns)) {
                 Choices((3..6).map { it.toString() to it.toString() }, home.columns.toString()) {
                     onChange(draft.copy(home = home.copy(columns = it.toInt())))
                 }
             }
-            Toggle("App names under icons", home.showLabels) { onChange(draft.copy(home = home.copy(showLabels = it))) }
+            Toggle(stringResource(R.string.show_labels), home.showLabels) { onChange(draft.copy(home = home.copy(showLabels = it))) }
             Toggle(
-                "Notification dots",
+                stringResource(R.string.notification_dots),
                 home.notificationDots,
-                note = "Shows which apps have notifications. Android will ask you to allow notification access, which also lets " +
-                    "the launcher read them. It only keeps which apps have one.",
+                note = stringResource(R.string.notification_dots_note),
             ) { onChange(draft.copy(home = home.copy(notificationDots = it))) }
-            Setting(if (home.style == "glass") "Dock apps" else "Favorite apps") {
+            Setting(stringResource(if (home.style == "glass") R.string.dock_apps else R.string.favorite_apps)) {
                 OutlinedButton(onClick = onPickFavorites, modifier = Modifier.testTag("customize-favorites")) {
-                    Text(if (home.favorites.isEmpty()) "Choose apps" else "${home.favorites.size} chosen · Change")
+                    Text(if (home.favorites.isEmpty()) stringResource(R.string.choose_apps) else stringResource(R.string.chosen_change, home.favorites.size))
                 }
             }
             BackupButtons(controls.onRestored)
             if (controls.hasPhoneChanges) {
                 HorizontalDivider()
                 TextButton(onClick = onReset, modifier = Modifier.testTag("customize-reset")) {
-                    Text("Undo all changes made on this phone", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.undo_phone_changes), color = MaterialTheme.colorScheme.error)
                 }
             }
             Spacer(Modifier.height(24.dp))
@@ -248,6 +266,7 @@ private fun Choices(options: List<Pair<String, String>>, selected: String, onSel
 
 @Composable
 private fun Swatches(colors: List<String>, selected: String, onSelect: (String) -> Unit) {
+    val wallpaperName = stringResource(R.string.wallpaper)
     FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         colors.forEach { value ->
             val ring = if (value == selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
@@ -264,10 +283,10 @@ private fun Swatches(colors: List<String>, selected: String, onSelect: (String) 
                         },
                     )
                     .clickable(onClickLabel = value) { onSelect(value) }
-                    .semantics { contentDescription = if (value == "wallpaper") "Wallpaper" else value },
+                    .semantics { contentDescription = if (value == "wallpaper") wallpaperName else value },
                 contentAlignment = Alignment.Center,
             ) {
-                if (value == "wallpaper") Text("W", style = MaterialTheme.typography.labelMedium)
+                if (value == "wallpaper") Text(stringResource(R.string.wallpaper_letter), style = MaterialTheme.typography.labelMedium)
             }
         }
     }
@@ -285,8 +304,8 @@ private fun FavoritesPicker(apps: List<AppEntry>, initial: List<String>, onDone:
     }
     Column(Modifier.statusBarsPadding().navigationBarsPadding().testTag("favorites-picker")) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text("Choose apps", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f).padding(start = 8.dp))
-            TextButton(onClick = { onDone(chosen) }) { Text("Done") }
+            Text(stringResource(R.string.choose_apps), style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f).padding(start = 8.dp))
+            TextButton(onClick = { onDone(chosen) }) { Text(stringResource(R.string.done)) }
         }
         HorizontalDivider()
         LazyColumn {
@@ -316,25 +335,24 @@ private fun BackupButtons(onRestored: () -> Unit) {
     val save = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
         uri ?: return@rememberLauncherForActivityResult
         runCatching { context.contentResolver.openOutputStream(uri)?.use { it.write(Backup.export(context).toByteArray()) } }
-            .onSuccess { Toast.makeText(context, "Backed up", Toast.LENGTH_SHORT).show() }
-            .onFailure { Toast.makeText(context, "Couldn't save the backup", Toast.LENGTH_SHORT).show() }
+            .onSuccess { Toast.makeText(context, R.string.backed_up, Toast.LENGTH_SHORT).show() }
+            .onFailure { Toast.makeText(context, R.string.backup_failed, Toast.LENGTH_SHORT).show() }
     }
     val restore = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         uri ?: return@rememberLauncherForActivityResult
         val text = runCatching { context.contentResolver.openInputStream(uri)?.use { it.readBytes().decodeToString() } }.getOrNull()
-        val problem = if (text == null) "Couldn't read that file" else Backup.import(context, text)
+        val problem = if (text == null) R.string.restore_unreadable else Backup.import(context, text)
         if (problem == null) onRestored() else Toast.makeText(context, problem, Toast.LENGTH_LONG).show()
     }
-    Setting("Backup") {
+    Setting(stringResource(R.string.backup)) {
         Text(
-            "Saves what you changed on this phone, including the glass style's icons and dock, to move it to a new phone. " +
-                "Widgets have to be added again.",
+            stringResource(R.string.backup_note),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(onClick = { save.launch("launcher-backup.json") }, modifier = Modifier.testTag("backup-save")) { Text("Back up") }
-            OutlinedButton(onClick = { restore.launch(arrayOf("application/json", "text/plain", "*/*")) }) { Text("Restore") }
+            OutlinedButton(onClick = { save.launch("launcher-backup.json") }, modifier = Modifier.testTag("backup-save")) { Text(stringResource(R.string.back_up)) }
+            OutlinedButton(onClick = { restore.launch(arrayOf("application/json", "text/plain", "*/*")) }) { Text(stringResource(R.string.restore)) }
         }
     }
 }

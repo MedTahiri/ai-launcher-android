@@ -1,5 +1,7 @@
 package io.github.medtahiri.launcher.home
 
+import androidx.compose.ui.res.stringResource
+import io.github.medtahiri.launcher.R
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.combinedClickable
@@ -59,7 +61,7 @@ fun AppIcon(
             modifier = Modifier
                 .fillMaxWidth()
                 .combinedClickable(
-                    onClickLabel = "Open ${app.label}",
+                    onClickLabel = stringResource(R.string.open_app, app.label),
                     onLongClick = { menuOpen = true },
                     onClick = { openApp(context, app); onOpened() },
                 )
@@ -98,9 +100,9 @@ fun AppIcon(
                     },
                 )
             }
-            DropdownMenuItem(text = { Text("App info") }, onClick = { menuOpen = false; openAppInfo(context, app) })
+            DropdownMenuItem(text = { Text(stringResource(R.string.app_info)) }, onClick = { menuOpen = false; openAppInfo(context, app) })
             if (allowUninstall) {
-                DropdownMenuItem(text = { Text("Uninstall") }, onClick = { menuOpen = false; uninstallApp(context, app) })
+                DropdownMenuItem(text = { Text(stringResource(R.string.uninstall)) }, onClick = { menuOpen = false; uninstallApp(context, app) })
             }
         }
     }

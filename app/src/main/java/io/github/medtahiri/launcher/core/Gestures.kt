@@ -1,5 +1,6 @@
 package io.github.medtahiri.launcher.core
 
+import io.github.medtahiri.launcher.R
 import android.accessibilityservice.AccessibilityService
 import android.content.ComponentName
 import android.content.Context
@@ -32,7 +33,7 @@ object Gestures {
     fun runSystem(context: Context, action: String, appName: String) {
         val service = GestureService.instance
         if (service == null) {
-            Toast.makeText(context, "To use this gesture, turn on $appName in Accessibility", Toast.LENGTH_LONG).show()
+            Toast.makeText(context, context.getString(R.string.gesture_needs_access, appName), Toast.LENGTH_LONG).show()
             runCatching { context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
             return
         }
@@ -40,7 +41,7 @@ object Gestures {
             "notifications" -> AccessibilityService.GLOBAL_ACTION_NOTIFICATIONS
             "quick_settings" -> AccessibilityService.GLOBAL_ACTION_QUICK_SETTINGS
             "lock" -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) AccessibilityService.GLOBAL_ACTION_LOCK_SCREEN else {
-                Toast.makeText(context, "Locking by gesture needs Android 9 or newer", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, R.string.gesture_lock_old, Toast.LENGTH_SHORT).show()
                 return
             }
             else -> return

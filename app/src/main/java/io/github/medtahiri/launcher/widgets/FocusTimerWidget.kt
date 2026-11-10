@@ -1,5 +1,7 @@
 package io.github.medtahiri.launcher.widgets
 
+import androidx.compose.ui.res.stringResource
+import io.github.medtahiri.launcher.R
 import android.content.Context
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -61,8 +63,8 @@ object FocusTimerWidget : LauncherWidget {
             Text(
                 when {
                     running -> String.format(Locale.ROOT, "%02d:%02d", left / 60, left % 60)
-                    justFinished -> "Focus done"
-                    else -> "$minutes min focus"
+                    justFinished -> stringResource(R.string.focus_done)
+                    else -> stringResource(R.string.focus_minutes, minutes)
                 },
                 style = MaterialTheme.typography.headlineMedium,
             )
@@ -72,9 +74,9 @@ object FocusTimerWidget : LauncherWidget {
             ) {
                 Text(
                     when {
-                        running -> "Stop"
-                        justFinished -> "Start again"
-                        else -> "Start"
+                        running -> stringResource(R.string.stop)
+                        justFinished -> stringResource(R.string.start_again)
+                        else -> stringResource(R.string.start)
                     },
                 )
             }

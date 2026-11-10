@@ -1,5 +1,7 @@
 package io.github.medtahiri.launcher.home
 
+import androidx.compose.ui.res.stringResource
+import io.github.medtahiri.launcher.R
 import android.app.Activity
 import android.app.KeyguardManager
 import android.hardware.biometrics.BiometricManager
@@ -53,7 +55,7 @@ fun rememberUnlock(title: String, onUnlocked: () -> Unit): () -> Unit {
             when {
                 activity == null -> Unit
                 keyguard?.isDeviceSecure != true -> {
-                    Toast.makeText(activity, "Set a screen lock to keep these apps private", Toast.LENGTH_LONG).show()
+                    Toast.makeText(activity, R.string.private_needs_lock, Toast.LENGTH_LONG).show()
                     onUnlocked()
                 }
                 Build.VERSION.SDK_INT >= Build.VERSION_CODES.P -> {
@@ -92,8 +94,8 @@ fun PrivateAppsButton(apps: List<AppEntry>, config: LauncherConfig, color: Color
     }
     if (private.isEmpty()) return
     var open by remember { mutableStateOf(false) }
-    val unlock = rememberUnlock("Private apps") { open = true }
-    TextButton(onClick = unlock, modifier = modifier.testTag("private-apps")) { Text("Private apps", color = color) }
+    val unlock = rememberUnlock(stringResource(R.string.private_apps)) { open = true }
+    TextButton(onClick = unlock, modifier = modifier.testTag("private-apps")) { Text(stringResource(R.string.private_apps), color = color) }
     if (open) {
         Dialog(onDismissRequest = { open = false }) {
             Surface(
@@ -102,7 +104,7 @@ fun PrivateAppsButton(apps: List<AppEntry>, config: LauncherConfig, color: Color
                 modifier = Modifier.fillMaxWidth().semantics { testTagsAsResourceId = true }.testTag("private-apps-open"),
             ) {
                 Column(Modifier.padding(16.dp)) {
-                    Text("Private apps", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(start = 8.dp, bottom = 8.dp))
+                    Text(stringResource(R.string.private_apps), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(start = 8.dp, bottom = 8.dp))
                     private.chunked(4).forEach { row ->
                         Row(Modifier.fillMaxWidth()) {
                             row.forEach {
